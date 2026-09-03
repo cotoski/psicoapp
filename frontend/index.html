@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PsicoApp - Protótipo</title>
+    <link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
+    <link rel="stylesheet" href="/src/index.css" />
+  </head>
+  <body>
+    <div id="app" style="padding: 0; background: var(--surface-0); min-height: 100vh; font-family: var(--font-sans);">
+      <div class="app-wrapper">
+        <div class="sidebar">
+          <div class="sidebar-title">
+            <i class="ti ti-briefcase-medical" style="font-size: 18px;"></i>
+            <span>PsicoApp</span>
+          </div>
+
+          <div class="nav-item active" data-page="dashboard"><i class="ti ti-home"></i> Dashboard</div>
+          <div class="nav-item" data-page="agenda"><i class="ti ti-calendar"></i> Agenda</div>
+          <div class="nav-item" data-page="sessao"><i class="ti ti-notes"></i> Nova sessão</div>
+          <div class="nav-item" data-page="pacientes"><i class="ti ti-users"></i> Pacientes</div>
+          <div class="nav-item" data-page="financeiro"><i class="ti ti-receipt"></i> Financeiro</div>
+          <div class="nav-item" data-page="notas"><i class="ti ti-file-invoice"></i> Geração de nota</div>
+          <div class="nav-item" data-page="laudos"><i class="ti ti-file-text"></i> Laudos</div>
+
+          <div style="border-top: 0.5px solid var(--border); margin-top: 1.5rem; padding-top: 1.5rem;">
+            <div class="nav-item" data-page="config"><i class="ti ti-settings"></i> Config</div>
+          </div>
+        </div>
+
+        <div class="main-content">
+          <div class="header">
+            <div class="header-title" id="page-title">Dashboard</div>
+            <div class="user-info">
+              <div>👤 <span id="user-name">Dra. Ana Demo</span></div>
+            </div>
+          </div>
+
+          <div class="content">
+
+            <!-- DASHBOARD -->
+            <div class="page active" id="dashboard">
+              <div class="section-title">Bem-vindo de volta</div>
+
+              <div class="metrics-grid">
+                <div class="metric-card">
+                  <div class="metric-label">Sessões este mês</div>
+                  <div class="metric-value" id="dash-metric-0">0</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">Faturamento</div>
+                  <div class="metric-value" id="dash-metric-1">R$ 0</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">Pendências</div>
+                  <div class="metric-value" id="dash-metric-2">0</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">Taxa presença</div>
+                  <div class="metric-value" id="dash-metric-3">0%</div>
+                </div>
+              </div>
+
+              <div class="card" id="dashboard-sessions-list">
+                <h3 style="margin-bottom: 1rem; font-size: 15px; font-weight: 500;">📅 Próximas sessões</h3>
+                <div class="loading-state">Carregando...</div>
+              </div>
+
+              <div class="card">
+                <h3 style="margin-bottom: 1rem; font-size: 15px; font-weight: 500;">🔐 Status segurança</h3>
+                <div style="font-size: 13px; line-height: 1.8;">
+                  <div>✓ Criptografia AES-256 ativa</div>
+                  <div>✓ Backup: 30/ago 23:47</div>
+                  <div>⚠ 2 laudos aguardando assinatura</div>
+                  <div style="color: var(--text-danger);">✗ Revisar ACL de 2 pacientes (LGPD)</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- AGENDA -->
+            <div class="page" id="agenda">
+              <div class="section-title">Meu calendário</div>
+
+              <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 1rem;">
+                <button class="btn btn-small" id="agenda-view-month" data-view="month">Mês</button>
+                <button class="btn btn-small" id="agenda-view-week" data-view="week">Semana</button>
+                <button class="btn btn-small" id="agenda-view-day" data-view="day">Dia</button>
+              </div>
+
+              <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                  <button id="agenda-prev" class="btn btn-secondary btn-small"><i class="ti ti-chevron-left" aria-hidden="true"></i></button>
+                  <span id="agenda-title" style="font-size: 14px; font-weight: 500;"></span>
+                  <button id="agenda-next" class="btn btn-secondary btn-small"><i class="ti ti-chevron-right" aria-hidden="true"></i></button>
+                </div>
+
+                <div id="view-month">
+                  <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
+                    <div style="text-align: center; font-size: 11px; color: var(--text-muted); padding: 4px 0;">S</div>
+                    <div style="text-align: center; font-size: 11px; color: var(--text-muted); padding: 4px 0;">T</div>
+                    <div style="text-align: center; font-size: 11px; color: var(--text-muted); padding: 4px 0;">Q</div>
+                    <div style="text-align: center; font-size: 11px; color: var(--text-muted); padding: 4px 0;">Q</div>
+                    <div style="text-align: center; font-size: 11px; color: var(--text-muted); padding: 4px 0;">S</div>
+                    <div style="text-align: center; font-size: 11px; color: var(--text-muted); padding: 4px 0;">S</div>
+                    <div style="text-align: center; font-size: 11px; color: var(--text-muted); padding: 4px 0;">D</div>
+                  </div>
+                  <div id="month-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 4px;"></div>
+                </div>
+
+                <div id="view-week" style="display: none;">
+                  <div style="overflow-x: auto;">
+                    <div id="week-grid" style="display: grid; grid-template-columns: 44px repeat(7, minmax(74px, 1fr)); min-width: 600px;"></div>
+                  </div>
+                </div>
+
+                <div id="view-day" style="display: none;">
+                  <div id="day-grid" style="display: grid; grid-template-columns: 44px 1fr;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- NOVA SESSÃO -->
+            <div class="page" id="sessao">
+              <div class="section-title">Registrar nova sessão</div>
+
+              <div class="card">
+                <div class="form-group">
+                  <label>Selecione o paciente</label>
+                  <select id="patient-select">
+                    <option>Carregando pacientes...</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label>Data e hora</label>
+                  <input type="datetime-local" id="session-datetime">
+                </div>
+
+                <div class="form-group">
+                  <label>Valor da sessão</label>
+                  <input type="number" step="0.01" id="session-valor" placeholder="R$ 0,00">
+                </div>
+
+                <div class="form-group">
+                  <label>Estado emocional</label>
+                  <div class="button-group">
+                    <button class="btn btn-secondary btn-small emotion-btn" data-emotion="baixo">😢 Baixo</button>
+                    <button class="btn btn-secondary btn-small emotion-btn" data-emotion="neutro">😐 Neutro</button>
+                    <button class="btn btn-secondary btn-small emotion-btn" data-emotion="bom">😊 Bom</button>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Temas abordados</label>
+                  <div style="margin-bottom: 8px;" id="topics-area">
+                    <span class="pill" data-topic="Relacionamento">Relacionamento</span>
+                    <span class="pill" data-topic="Trabalho">Trabalho</span>
+                    <span class="pill" data-topic="Ansiedade">Ansiedade</span>
+                  </div>
+                  <input type="text" id="new-topic" placeholder="Adicionar novo tema..." style="margin-top: 8px;">
+                </div>
+
+                <div class="form-group">
+                  <label>Notas da sessão</label>
+                  <textarea id="session-notes" placeholder="Registre os pontos principais..."></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label>Tarefas para casa</label>
+                  <textarea id="session-homework" placeholder="Descreva exercícios..."></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label>Próximas metas</label>
+                  <textarea id="session-goals" placeholder="Objetivos para próxima sessão..."></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label>Status de pagamento</label>
+                  <div class="button-group">
+                    <button class="btn btn-secondary btn-small payment-btn" data-payment="pago">✓ Pago</button>
+                    <button class="btn btn-secondary btn-small payment-btn" data-payment="pendente">Pendente</button>
+                    <button class="btn btn-secondary btn-small payment-btn" data-payment="cancelada">Cancelada</button>
+                  </div>
+                </div>
+
+                <button class="btn" id="save-session-btn" style="width: 100%; background: var(--fill-accent); color: var(--on-accent); border: 0;">Salvar sessão</button>
+              </div>
+            </div>
+
+            <!-- PACIENTES -->
+            <div class="page" id="pacientes">
+              <div class="section-title">Meus pacientes</div>
+
+              <div style="margin-bottom: 1rem;">
+                <input type="text" id="patient-search" placeholder="🔍 Buscar paciente..." style="width: 100%; padding: 10px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--surface-1);">
+              </div>
+
+              <div class="card" id="patients-list">
+                <div class="loading-state">Carregando pacientes...</div>
+              </div>
+
+              <button class="btn" id="new-patient-btn" style="width: 100%; background: var(--fill-accent); color: var(--on-accent); border: 0;"><i class="ti ti-plus" style="margin-right: 6px;"></i>Novo paciente</button>
+            </div>
+
+            <!-- FINANCEIRO -->
+            <div class="page" id="financeiro">
+              <div class="section-title">Controle Financeiro</div>
+
+              <div class="metrics-grid">
+                <div class="metric-card">
+                  <div class="metric-label" id="finance-label-0">A receber (período)</div>
+                  <div class="metric-value" id="finance-metric-0">R$ 0</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">Recebido</div>
+                  <div class="metric-value" id="finance-metric-1" style="color: var(--text-success);">R$ 0</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">Pendente</div>
+                  <div class="metric-value" id="finance-metric-2" style="color: var(--text-danger);">R$ 0</div>
+                </div>
+              </div>
+
+              <div class="card">
+                <h3 style="margin-bottom: 1rem; font-size: 15px; font-weight: 500;">Período</h3>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: end; margin-bottom: 1rem;">
+                  <div class="form-group" style="flex: 2; min-width: 160px; margin: 0;">
+                    <label style="font-size: 11px; color: var(--text-secondary);">Paciente</label>
+                    <select id="finance-patient" style="width: 100%;">
+                      <option value="">Todos</option>
+                    </select>
+                  </div>
+                  <div class="form-group" style="flex: 1; min-width: 140px; margin: 0;">
+                    <label style="font-size: 11px; color: var(--text-secondary);">Mês/ano</label>
+                    <input type="month" id="finance-month" style="width: 100%;">
+                  </div>
+                  <div class="form-group" style="flex: 1; min-width: 120px; margin: 0;">
+                    <label style="font-size: 11px; color: var(--text-secondary);">Início</label>
+                    <input type="date" id="finance-start" style="width: 100%;">
+                  </div>
+                  <div class="form-group" style="flex: 1; min-width: 120px; margin: 0;">
+                    <label style="font-size: 11px; color: var(--text-secondary);">Fim</label>
+                    <input type="date" id="finance-end" style="width: 100%;">
+                  </div>
+                  <button class="btn btn-small" id="finance-search" style="margin-bottom: 2px;">Pesquisar</button>
+                  <button class="btn btn-secondary btn-small" id="finance-today" style="margin-bottom: 2px;">Mês atual</button>
+                </div>
+              </div>
+
+              <div class="card">
+                <h3 style="margin-bottom: 1rem; font-size: 15px; font-weight: 500;">Sessões do período</h3>
+                <div class="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr style="border-bottom: 0.5px solid var(--border);">
+                        <th>Data</th>
+                        <th>Paciente</th>
+                        <th style="text-align: right;">Valor</th>
+                        <th style="text-align: center;">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="financeiro-tbody">
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="card">
+                <button class="btn" style="width: 100%; background: var(--fill-accent); color: var(--on-accent); border: 0; margin-bottom: 8px;"><i class="ti ti-download" style="margin-right: 6px;"></i>Exportar relatório (Excel)</button>
+                <button class="btn btn-secondary" style="width: 100%;"><i class="ti ti-printer" style="margin-right: 6px;"></i>Gerar recibos em lote</button>
+              </div>
+            </div>
+
+            <!-- NOTAS -->
+            <div class="page" id="notas">
+              <div class="section-title">Geração de nota</div>
+              <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 1rem;">Sessões pendentes de faturamento (imediato ou por pacote).</p>
+              <div id="notas-list"></div>
+            </div>
+
+            <!-- LAUDOS -->
+            <div class="page" id="laudos">
+              <div class="section-title">Geração de Laudos</div>
+
+              <div class="card">
+                <h3 style="margin-bottom: 1rem; font-size: 15px; font-weight: 500;">Templates disponíveis</h3>
+                <div class="patient-row">
+                  <div class="patient-info">
+                    <h4>Laudo de Diagnóstico</h4>
+                    <p>Diagnóstico clínico e recomendações</p>
+                  </div>
+                  <i class="ti ti-arrow-right" style="color: var(--text-secondary);"></i>
+                </div>
+                <div class="patient-row">
+                  <div class="patient-info">
+                    <h4>Relatório para Terceiros</h4>
+                    <p>Escola, emprego, processos legais</p>
+                  </div>
+                  <i class="ti ti-arrow-right" style="color: var(--text-secondary);"></i>
+                </div>
+                <div class="patient-row">
+                  <div class="patient-info">
+                    <h4>Atestado de Comparecimento</h4>
+                    <p>Comprovação de sessões realizadas</p>
+                  </div>
+                  <i class="ti ti-arrow-right" style="color: var(--text-secondary);"></i>
+                </div>
+                <div class="patient-row">
+                  <div class="patient-info">
+                    <h4>Relatório de Evolução Clínica</h4>
+                    <p>Progresso terapêutico do tratamento</p>
+                  </div>
+                  <i class="ti ti-arrow-right" style="color: var(--text-secondary);"></i>
+                </div>
+              </div>
+
+              <div class="card">
+                <h3 style="margin-bottom: 1rem; font-size: 15px; font-weight: 500;">Laudos recentes</h3>
+                <div style="font-size: 13px;">
+                  <div style="padding: 10px; background: var(--surface-1); margin-bottom: 8px; border-radius: var(--radius);">
+                    <div style="font-weight: 500;">Maria Santos - Laudo de Diagnóstico</div>
+                    <div style="color: var(--text-secondary); margin-top: 4px;">Gerado em 28/ago · ✓ Assinado</div>
+                  </div>
+                  <div style="padding: 10px; background: var(--surface-1); margin-bottom: 8px; border-radius: var(--radius);">
+                    <div style="font-weight: 500;">Carlos Oliveira - Relatório para Terceiros</div>
+                    <div style="color: var(--text-danger); margin-top: 4px;">⚠ Aguardando assinatura digital</div>
+                  </div>
+                  <div style="padding: 10px; background: var(--surface-1); margin-bottom: 8px; border-radius: var(--radius);">
+                    <div style="font-weight: 500;">Patricia Lima - Atestado de Comparecimento</div>
+                    <div style="color: var(--text-secondary); margin-top: 4px;">Gerado em 25/ago · ✓ Assinado</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CONFIGURAÇÕES -->
+            <div class="page" id="config">
+              <div class="section-title">Configurações</div>
+
+              <div class="card">
+                <h3 style="margin-bottom: 1rem; font-size: 15px; font-weight: 500;">🔐 Segurança e LGPD</h3>
+                <div style="font-size: 13px; line-height: 2;">
+                  <div>✓ Criptografia AES-256 ativa</div>
+                  <div>✓ Autenticação 2FA: <span style="background: var(--bg-success); color: var(--text-success); padding: 2px 8px; border-radius: 4px; font-size: 11px;">Ativa</span></div>
+                  <div>✓ Backup automático: Diário · Encriptado</div>
+                  <div>• Direito ao esquecimento: Excluir após 90 dias</div>
+                  <div style="margin-top: 1rem;"><button class="btn btn-secondary btn-small">Baixar logs de acesso</button></div>
+                </div>
+              </div>
+
+              <div class="card">
+                <h3 style="margin-bottom: 1rem; font-size: 15px; font-weight: 500;">⏰ Horários de Atendimento</h3>
+                <div style="font-size: 13px; display: grid; grid-template-columns: 80px 1fr; gap: 12px; row-gap: 8px;">
+                  <div style="font-weight: 500;">Segunda</div> <div>09:00 - 18:00</div>
+                  <div style="font-weight: 500;">Terça</div> <div>09:00 - 18:00</div>
+                  <div style="font-weight: 500;">Quarta</div> <div>09:00 - 18:00</div>
+                  <div style="font-weight: 500;">Quinta</div> <div>09:00 - 18:00</div>
+                  <div style="font-weight: 500;">Sexta</div> <div>09:00 - 18:00</div>
+                  <div style="font-weight: 500;">Sábado</div> <div>Fechado</div>
+                  <div style="font-weight: 500;">Domingo</div> <div>Fechado</div>
+                </div>
+              </div>
+
+              <div class="card">
+                <h3 style="margin-bottom: 1rem; font-size: 15px; font-weight: 500;">Valores de sessão</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                  <div class="form-group">
+                    <label>Sessão regular</label>
+                    <input type="text" value="R$ 350">
+                  </div>
+                  <div class="form-group">
+                    <label>Sessão de retorno</label>
+                    <input type="text" value="R$ 280">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-overlay" id="patient-modal-overlay" style="align-items: flex-start; padding-top: 5vh;">
+      <div class="modal" style="position: relative; width: 100%; max-width: 480px;">
+        <button class="modal-close" id="close-patient-modal" aria-label="Fechar" style="color: var(--text-secondary);">×</button>
+        <div class="modal-header" id="patient-modal-title">Novo paciente</div>
+        <div class="form-group">
+          <label>Nome</label>
+          <input type="text" id="patient-nome" placeholder="Nome completo">
+        </div>
+        <div class="form-group">
+          <label>CPF</label>
+          <input type="text" id="patient-cpf" placeholder="000.000.000-00">
+        </div>
+        <div class="form-group">
+          <label>Telefone</label>
+          <input type="text" id="patient-telefone" placeholder="(00) 00000-0000">
+        </div>
+        <div class="form-group">
+          <label>E-mail</label>
+          <input type="email" id="patient-email" placeholder="email@exemplo.com">
+        </div>
+        <div class="form-group">
+          <label>Data de nascimento</label>
+          <input type="date" id="patient-nascimento">
+        </div>
+        <div class="form-group">
+          <label>Anamnese</label>
+          <textarea id="patient-anamnese" placeholder="Resumo da anamnese..." style="min-height: 80px;"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Valor padrão da sessão</label>
+          <input type="number" step="0.01" id="patient-valor" placeholder="R$ 0,00">
+        </div>
+        <div class="form-group">
+          <label>Tipo de faturamento</label>
+          <select id="patient-tipo">
+            <option value="imediato">Imediato (1 sessão)</option>
+            <option value="pacote">Pacote</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Frequência</label>
+          <select id="patient-frequencia">
+            <option value="semanal">Semanal</option>
+            <option value="quinzenal">A cada 15 dias</option>
+            <option value="mensal">Uma vez por mês</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Dias da semana (segure Ctrl para marcar vários)</label>
+          <select id="patient-dias" multiple style="min-height: 100px;">
+            <option value="segunda">Segunda</option>
+            <option value="terca">Terça</option>
+            <option value="quarta">Quarta</option>
+            <option value="quinta">Quinta</option>
+            <option value="sexta">Sexta</option>
+            <option value="sabado">Sábado</option>
+            <option value="domingo">Domingo</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Horário</label>
+          <input type="time" id="patient-horario">
+        </div>
+        <div class="form-group">
+          <label>Data para reajuste</label>
+          <input type="date" id="patient-reajuste">
+        </div>
+        <div class="form-group">
+          <label>Meses do ciclo</label>
+          <input type="number" id="patient-meses" value="6" min="1">
+        </div>
+        <div class="form-group">
+          <label>Sala de reunião (Google Meet, Zoom, etc.)</label>
+          <input type="url" id="patient-sala" placeholder="https://..." style="width: 100%;">
+        </div>
+        <p style="font-size: 12px; color: var(--text-secondary);">Preencha para gerar automaticamente as sessões na agenda.</p>
+        <button class="btn" id="save-patient-btn" style="width: 100%;">Salvar paciente</button>
+      </div>
+    </div>
+    <div class="modal-overlay" id="patient-detail-modal-overlay" style="align-items: flex-start; padding-top: 5vh;">
+      <div class="modal" style="position: relative; width: 100%; max-width: 640px;">
+        <button class="modal-close" id="close-patient-detail" aria-label="Fechar" style="color: var(--text-secondary);">×</button>
+        <div class="modal-header" id="detail-patient-name">Detalhes do paciente</div>
+        <div id="patient-detail-info" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 1rem; font-size: 13px;">
+          <div style="color: var(--text-secondary);">
+            Reajuste: <span id="detail-reajuste" style="color: var(--text-primary); font-weight: 500;">-</span>
+          </div>
+          <button class="btn btn-small" id="renovar-ciclo-btn" data-id="" style="background: var(--fill-accent); color: var(--on-accent); border: 0;">Renovar ciclo</button>
+        </div>
+        <div id="detail-sessions-list" style="font-size: 13px;">
+          <div class="empty-state">Nenhuma sessão encontrada.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="session-edit-modal-overlay" style="align-items: flex-start; padding-top: 5vh;">
+      <div class="modal" style="position: relative; width: 100%; max-width: 480px;">
+        <button class="modal-close" id="close-session-edit" aria-label="Fechar" style="color: var(--text-secondary);">×</button>
+        <div class="modal-header" id="edit-session-title">Editar sessão</div>
+        <input type="hidden" id="edit-session-id">
+        <div class="form-group">
+          <label>Paciente</label>
+          <input type="text" id="edit-session-paciente" disabled style="background: var(--surface-0); color: var(--text-secondary);">
+        </div>
+        <div class="form-group">
+          <label>Data e hora</label>
+          <input type="datetime-local" id="edit-session-datetime">
+        </div>
+        <div class="form-group">
+          <label>Valor</label>
+          <input type="number" step="0.01" id="edit-session-valor" placeholder="R$ 0,00">
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="edit-session-status">
+            <option value="agendada">Agendada</option>
+            <option value="confirmada">Confirmada</option>
+            <option value="realizada">Realizada</option>
+            <option value="remarcada">Remarcada</option>
+            <option value="cancelada">Cancelada</option>
+            <option value="faltou">Faltou</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Pago em</label>
+          <input type="date" id="edit-session-pago-em">
+        </div>
+        <div class="form-group">
+          <label>Notas</label>
+          <textarea id="edit-session-notas" placeholder="Notas..." style="min-height: 80px;"></textarea>
+        </div>
+        <button class="btn btn-secondary" id="edit-session-paciente-btn" data-patient-id="" style="width: 100%; margin-bottom: 8px; border: 0.5px solid var(--border);">Editar paciente</button>
+        <button class="btn" id="edit-session-save" style="width: 100%; margin-bottom: 8px;">Salvar alterações</button>
+        <button class="btn" id="edit-session-delete" style="width: 100%; background: var(--bg-danger); color: var(--text-danger); border: 0.5px solid var(--border);">Excluir sessão</button>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="session-options-modal-overlay" style="align-items: center; padding-top: 5vh;">
+      <div class="modal" style="position: relative; width: 100%; max-width: 320px; text-align: center;">
+        <button class="modal-close" id="close-session-options" aria-label="Fechar" style="color: var(--text-secondary);">×</button>
+        <div class="modal-header" id="session-options-title">Sessão de Paciente</div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 1rem;" id="session-options-subtitle"></div>
+        <input type="hidden" id="session-options-session-id">
+        <input type="hidden" id="session-options-patient-id">
+        <button class="btn" id="session-options-editar" style="width: 100%; margin-bottom: 8px; background: var(--fill-accent); color: var(--on-accent); border: 0;">Editar paciente</button>
+        <button class="btn" id="session-options-registrar" style="width: 100%; margin-bottom: 8px; border: 0.5px solid var(--border);">Registrar sessão</button>
+        <a class="btn" id="session-options-sala" href="#" target="_blank" style="width: 100%; display: none; background: var(--bg-success); color: var(--text-success); border: 0.5px solid var(--border); text-decoration: none; text-align: center;">Abrir sala de reunião</a>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="invoice-modal-overlay" style="align-items: flex-start; padding-top: 5vh;">
+      <div class="modal" style="position: relative; width: 100%; max-width: 520px;">
+        <button class="modal-close" id="close-invoice" aria-label="Fechar" style="color: var(--text-secondary);">×</button>
+        <div class="modal-header" id="invoice-modal-title">Nota</div>
+        <div id="invoice-modal-body" style="font-size: 13px; line-height: 1.6; margin-bottom: 1rem;"></div>
+        <div style="display: flex; gap: 8px; margin-bottom: 1rem;">
+          <a class="btn" id="invoice-email" href="#" style="flex: 1; background: var(--fill-accent); color: var(--on-accent); border: 0; text-align: center; text-decoration: none;">Enviar por e-mail</a>
+          <a class="btn" id="invoice-whatsapp" href="#" target="_blank" style="flex: 1; background: var(--bg-success); color: var(--text-success); border: 0.5px solid var(--border); text-align: center; text-decoration: none;">Enviar por WhatsApp</a>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

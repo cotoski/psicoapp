@@ -1,0 +1,153 @@
+<h2 class="sr-only">Protótipo da tela de Agenda com alternância entre visão de mês, semana e dia, mostrando agendamentos de pacientes</h2>
+<div style="display:flex;gap:8px;margin-bottom:1rem">
+  <button id="btn-month" onclick="setView('month')" style="flex:1">Mês</button>
+  <button id="btn-week" onclick="setView('week')" style="flex:1">Semana</button>
+  <button id="btn-day" onclick="setView('day')" style="flex:1">Dia</button>
+</div>
+
+<div id="view-month">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <button style="padding:4px 10px"><i class="ti ti-chevron-left" aria-hidden="true"></i></button>
+    <span style="font-size:14px;font-weight:500">Setembro 2026</span>
+    <button style="padding:4px 10px"><i class="ti ti-chevron-right" aria-hidden="true"></i></button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+    <div style="text-align:center;font-size:11px;color:var(--text-muted);padding:4px 0">S</div>
+    <div style="text-align:center;font-size:11px;color:var(--text-muted);padding:4px 0">T</div>
+    <div style="text-align:center;font-size:11px;color:var(--text-muted);padding:4px 0">Q</div>
+    <div style="text-align:center;font-size:11px;color:var(--text-muted);padding:4px 0">Q</div>
+    <div style="text-align:center;font-size:11px;color:var(--text-muted);padding:4px 0">S</div>
+    <div style="text-align:center;font-size:11px;color:var(--text-muted);padding:4px 0">S</div>
+    <div style="text-align:center;font-size:11px;color:var(--text-muted);padding:4px 0">D</div>
+  </div>
+  <div id="month-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:4px"></div>
+</div>
+
+<div id="view-week" style="display:none">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <button style="padding:4px 10px"><i class="ti ti-chevron-left" aria-hidden="true"></i></button>
+    <span style="font-size:14px;font-weight:500">31 ago – 6 set</span>
+    <button style="padding:4px 10px"><i class="ti ti-chevron-right" aria-hidden="true"></i></button>
+  </div>
+  <div style="overflow-x:auto">
+    <div id="week-grid" style="display:grid;grid-template-columns:44px repeat(7,minmax(74px,1fr));min-width:600px"></div>
+  </div>
+</div>
+
+<div id="view-day" style="display:none">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <button style="padding:4px 10px"><i class="ti ti-chevron-left" aria-hidden="true"></i></button>
+    <span style="font-size:14px;font-weight:500">Terça, 1 de setembro</span>
+    <button style="padding:4px 10px"><i class="ti ti-chevron-right" aria-hidden="true"></i></button>
+  </div>
+  <div id="day-grid" style="display:grid;grid-template-columns:44px 1fr"></div>
+</div>
+
+<script>
+const appts = {
+  1: [{t:'09:00',d:50,name:'Patricia Lima',status:'ok'}],
+  2: [{t:'14:00',d:50,name:'Maria Santos',status:'ok'},{t:'15:30',d:50,name:'Carlos Oliveira',status:'pend'}],
+  4: [{t:'11:00',d:50,name:'Roberto Alves',status:'pend'}],
+  5: [{t:'10:00',d:50,name:'Ana Costa',status:'ok'},{t:'16:00',d:50,name:'Fernanda Silva',status:'ok'}],
+};
+const statusColor = {ok:'var(--text-success)', pend:'var(--text-warning)'};
+const statusBg = {ok:'var(--bg-success)', pend:'var(--bg-warning)'};
+
+function buildMonth(){
+  const grid = document.getElementById('month-grid');
+  grid.innerHTML='';
+  const startPad = 1;
+  for(let i=0;i<startPad;i++){
+    const c = document.createElement('div');
+    grid.appendChild(c);
+  }
+  for(let day=1;day<=30;day++){
+    const cell = document.createElement('div');
+    cell.style.cssText = 'border:0.5px solid var(--border);border-radius:6px;min-height:56px;padding:4px;font-size:11px;cursor:pointer';
+    if(day===1) cell.style.borderColor='var(--border-accent)';
+    let html = `<div style="font-weight:500;margin-bottom:2px">${day}</div>`;
+    const list = appts[day];
+    if(list){
+      list.slice(0,2).forEach(a=>{
+        html += `<div style="background:${statusBg[a.status]};color:${statusColor[a.status]};border-radius:3px;padding:1px 3px;margin-bottom:2px;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.t} ${a.name.split(' ')[0]}</div>`;
+      });
+      if(list.length>2) html += `<div style="font-size:10px;color:var(--text-muted)">+${list.length-2}</div>`;
+    }
+    cell.innerHTML = html;
+    cell.onclick = ()=>sendPrompt('Mostrar detalhes do dia '+day+' de setembro');
+    grid.appendChild(cell);
+  }
+}
+
+function buildWeek(){
+  const grid = document.getElementById('week-grid');
+  grid.innerHTML='';
+  const days = [{n:31,m:'ago',d:0},{n:1,m:'set',d:1},{n:2,m:'set',d:2},{n:3,m:'set',d:3},{n:4,m:'set',d:4},{n:5,m:'set',d:5},{n:6,m:'set',d:6}];
+  grid.appendChild(document.createElement('div'));
+  days.forEach(dd=>{
+    const h = document.createElement('div');
+    h.style.cssText='text-align:center;font-size:11px;color:var(--text-secondary);padding:4px;border-bottom:0.5px solid var(--border)';
+    h.innerHTML = `${dd.n}<div style="font-size:10px;color:var(--text-muted)">${dd.m}</div>`;
+    grid.appendChild(h);
+  });
+  const hours = [8,9,10,11,12,13,14,15,16,17,18];
+  hours.forEach(hr=>{
+    const label = document.createElement('div');
+    label.style.cssText='font-size:10px;color:var(--text-muted);padding:8px 4px 0 0;text-align:right';
+    label.textContent = hr+':00';
+    grid.appendChild(label);
+    days.forEach(dd=>{
+      const cell = document.createElement('div');
+      cell.style.cssText='border-top:0.5px solid var(--border);min-height:34px;position:relative;padding:1px';
+      const list = appts[dd.d]||[];
+      const match = list.find(a=>parseInt(a.t.split(':')[0])===hr);
+      if(match){
+        cell.innerHTML = `<div style="background:${statusBg[match.status]};color:${statusColor[match.status]};border-radius:4px;padding:2px 4px;font-size:10px;line-height:1.3;cursor:pointer" title="${match.name}">${match.t}<br>${match.name.split(' ')[0]}</div>`;
+        cell.onclick = ()=>sendPrompt('Mostrar sessão de '+match.name);
+      }
+      grid.appendChild(cell);
+    });
+  });
+}
+
+function buildDay(){
+  const grid = document.getElementById('day-grid');
+  grid.innerHTML='';
+  const hours = [8,9,10,11,12,13,14,15,16,17,18];
+  const list = appts[1]||[];
+  hours.forEach(hr=>{
+    const label = document.createElement('div');
+    label.style.cssText='font-size:11px;color:var(--text-muted);padding:10px 8px 0 0;text-align:right';
+    label.textContent = hr+':00';
+    grid.appendChild(label);
+    const cell = document.createElement('div');
+    cell.style.cssText='border-top:0.5px solid var(--border);min-height:48px;padding:4px';
+    const match = list.find(a=>parseInt(a.t.split(':')[0])===hr);
+    if(match){
+      cell.innerHTML = `<div class="node" style="background:${statusBg[match.status]};border-left:3px solid ${statusColor[match.status]};border-radius:0 6px 6px 0;padding:6px 10px;cursor:pointer">
+        <div style="font-size:13px;font-weight:500;color:var(--text-primary)">${match.name}</div>
+        <div style="font-size:11px;color:${statusColor[match.status]}">${match.t} – ${match.status==='ok'?'Confirmada':'Pendente'} · ${match.d}min</div>
+      </div>`;
+      cell.querySelector('div').onclick = ()=>sendPrompt('Abrir prontuário de '+match.name);
+    }
+    grid.appendChild(cell);
+  });
+}
+
+function setView(v){
+  document.getElementById('view-month').style.display = v==='month'?'block':'none';
+  document.getElementById('view-week').style.display = v==='week'?'block':'none';
+  document.getElementById('view-day').style.display = v==='day'?'block':'none';
+  ['month','week','day'].forEach(x=>{
+    const b = document.getElementById('btn-'+x);
+    b.style.background = x===v ? 'var(--bg-accent)' : '';
+    b.style.color = x===v ? 'var(--text-accent)' : '';
+    b.style.borderColor = x===v ? 'var(--border-accent)' : '';
+  });
+}
+
+buildMonth();
+buildWeek();
+buildDay();
+setView('week');
+</script>

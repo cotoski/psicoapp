@@ -1,0 +1,499 @@
+<div id="app" style="padding: 0; background: var(--surface-0);">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.container { padding: 1.5rem; background: var(--surface-0); }
+.header { display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 0.5px solid var(--border); padding-bottom: 1rem; }
+.header-tab { padding: 10px 16px; border: 0.5px solid var(--border); border-radius: var(--radius); cursor: pointer; font-size: 14px; font-weight: 500; background: transparent; color: var(--text-secondary); transition: all 0.2s; }
+.header-tab.active { background: var(--bg-accent); color: var(--text-accent); border-color: var(--border-accent); }
+.section { display: none; }
+.section.active { display: block; }
+.card { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; }
+.form-group { margin-bottom: 1.5rem; }
+.form-group label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+.form-group input, .form-group select { width: 100%; padding: 10px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--surface-1); color: var(--text-primary); font-size: 14px; font-family: inherit; }
+.form-group input:focus, .form-group select:focus { outline: none; border-color: var(--border-accent); }
+.input-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.calculation-result { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem; }
+.result-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; padding: 8px 0; border-bottom: 0.5px solid var(--border); }
+.result-row:last-child { border-bottom: none; }
+.result-label { color: var(--text-secondary); }
+.result-value { font-weight: 500; color: var(--text-primary); }
+.result-value.highlight { color: var(--text-accent); font-size: 18px; }
+.tax-breakdown { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 1rem; }
+.tax-box { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1rem; text-align: center; }
+.tax-name { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+.tax-value { font-size: 20px; font-weight: 600; color: var(--text-accent); }
+.tax-percent { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+.regime-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+.regime-btn { padding: 12px; border: 0.5px solid var(--border); border-radius: var(--radius); background: transparent; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text-secondary); transition: all 0.2s; }
+.regime-btn:hover { background: var(--surface-1); }
+.regime-btn.active { background: var(--bg-accent); color: var(--text-accent); border-color: var(--border-accent); }
+.table-wrapper { overflow-x: auto; margin-top: 1rem; }
+.table-wrapper table { width: 100%; font-size: 13px; border-collapse: collapse; }
+.table-wrapper th { text-align: left; padding: 12px; background: var(--surface-1); color: var(--text-secondary); font-weight: 500; border-bottom: 0.5px solid var(--border); }
+.table-wrapper td { padding: 12px; border-bottom: 0.5px solid var(--border); }
+.patient-name { font-weight: 500; color: var(--text-primary); }
+.badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.badge-active { background: var(--bg-success); color: var(--text-success); }
+.badge-alert { background: var(--bg-warning); color: var(--text-warning); }
+.badge-reajuste { background: var(--bg-accent); color: var(--text-accent); }
+.patient-row { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1rem; margin-bottom: 0.75rem; }
+.patient-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.patient-name-big { font-weight: 500; font-size: 14px; }
+.patient-details { font-size: 12px; color: var(--text-secondary); }
+.reajuste-info { background: var(--bg-warning); border-left: 4px solid var(--fill-warning); padding: 12px; border-radius: var(--radius); margin-top: 8px; font-size: 12px; }
+.reajuste-info strong { color: var(--text-warning); }
+.btn { padding: 8px 16px; border: 0.5px solid var(--border-strong); border-radius: var(--radius); background: var(--fill-primary); color: var(--on-primary); cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; }
+.btn:hover { opacity: 0.9; }
+.btn-small { padding: 6px 12px; font-size: 12px; }
+.title { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
+.info-box { background: var(--bg-accent); border-left: 4px solid var(--fill-accent); padding: 12px; border-radius: var(--radius); font-size: 13px; color: var(--text-primary); margin-bottom: 1rem; }
+.comparison-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 1.5rem; }
+.comparison-card { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1rem; text-align: center; }
+.comparison-title { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500; }
+.comparison-old { font-size: 16px; font-weight: 500; color: var(--text-secondary); }
+.comparison-arrow { font-size: 20px; color: var(--text-danger); margin: 8px 0; }
+.comparison-new { font-size: 18px; font-weight: 600; color: var(--text-primary); }
+.comparison-increase { font-size: 12px; color: var(--text-accent); margin-top: 6px; font-weight: 500; }
+</style>
+
+<div class="container">
+  <div class="header">
+    <button class="header-tab active" data-tab="tributario">💰 Cálculo Tributário</button>
+    <button class="header-tab" data-tab="pacientes">👥 Pacientes & Reajustes</button>
+  </div>
+
+  <!-- SEÇÃO 1: CÁLCULO TRIBUTÁRIO -->
+  <div class="section active" id="tributario">
+    <div class="card">
+      <div class="title">📊 Calculadora de Impostos por Sessão</div>
+      
+      <div class="regime-selector">
+        <button class="regime-btn active" data-regime="pf">
+          <div>👤 Pessoa Física</div>
+          <div style="font-size: 11px; margin-top: 4px; color: var(--text-muted);">Carnê-Leão</div>
+        </button>
+        <button class="regime-btn" data-regime="simples">
+          <div>📦 Simples Nacional</div>
+          <div style="font-size: 11px; margin-top: 4px; color: var(--text-muted);">Anexo III</div>
+        </button>
+        <button class="regime-btn" data-regime="presumido">
+          <div>📋 Lucro Presumido</div>
+          <div style="font-size: 11px; margin-top: 4px; color: var(--text-muted);">Clássico PJ</div>
+        </button>
+      </div>
+
+      <div class="input-group">
+        <div class="form-group">
+          <label>Valor da sessão (R$)</label>
+          <input type="number" id="valor-sessao" value="400" step="10" min="0">
+        </div>
+        <div class="form-group">
+          <label>Município</label>
+          <select id="municipio">
+            <option value="sp">São Paulo (2%)</option>
+            <option value="rj">Rio de Janeiro (3%)</option>
+            <option value="mg">Belo Horizonte (2,5%)</option>
+            <option value="ba">Salvador (5%)</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="resultado-regime"></div>
+
+      <div class="tax-breakdown" id="tax-breakdown"></div>
+
+      <div class="info-box">
+        ℹ️ <strong>Dica:</strong> Simples Nacional geralmente é mais vantajoso para psicólogos com baixa folha de pagamento (Fator R < 28%).
+      </div>
+    </div>
+
+    <!-- COMPARATIVO -->
+    <div class="card">
+      <div class="title">🔄 Comparativo de Regimes</div>
+      <div class="comparison-grid">
+        <div class="comparison-card" id="comp-pf">
+          <div class="comparison-title">Pessoa Física</div>
+          <div class="comparison-old" id="comp-pf-valor">R$ 0</div>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;" id="comp-pf-tax">0%</div>
+        </div>
+        <div class="comparison-card" id="comp-simples">
+          <div class="comparison-title">Simples Nacional</div>
+          <div class="comparison-new" id="comp-simples-valor">R$ 0</div>
+          <div style="font-size: 12px; color: var(--text-accent); margin-top: 4px;" id="comp-simples-tax">0%</div>
+        </div>
+        <div class="comparison-card" id="comp-presumido">
+          <div class="comparison-title">Lucro Presumido</div>
+          <div class="comparison-old" id="comp-presumido-valor">R$ 0</div>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;" id="comp-presumido-tax">0%</div>
+        </div>
+      </div>
+
+      <div style="font-size: 12px; background: var(--surface-1); padding: 12px; border-radius: var(--radius); color: var(--text-secondary);">
+        💡 <strong>Economia anual:</strong> Se faturar R$ 12.000/mês durante 1 ano, a diferença entre o pior e melhor regime pode chegar a <strong>R$ 40.000</strong>. Consulte um contador!
+      </div>
+    </div>
+
+    <!-- DETALHAMENTO SIMPLES -->
+    <div class="card">
+      <div class="title">📋 Sobre o Simples Nacional (Mais Recomendado)</div>
+      <div style="font-size: 13px; line-height: 1.8; color: var(--text-secondary);">
+        <div style="margin-bottom: 1rem;">
+          <strong style="color: var(--text-primary);">✓ Vantagens:</strong><br>
+          • Alíquota menor (6-8% total)<br>
+          • Guia DAS única unificada<br>
+          • INSS incluído no DAS<br>
+          • Mais simples de gerir
+        </div>
+        <div style="margin-bottom: 1rem;">
+          <strong style="color: var(--text-primary);">⚠️ Critério importante:</strong><br>
+          Fator R = Folha de pagamento / Faturamento bruto dos últimos 12 meses<br>
+          <br>
+          • Se Fator R < 28% → Anexo III (6-8.5%)<br>
+          • Se Fator R ≥ 28% → Anexo V (11-16%)
+        </div>
+        <div>
+          <strong style="color: var(--text-primary);">💡 Para seu app:</strong><br>
+          Mostre ao psicólogo qual regime é melhor baseado no seu faturamento atual. Se ele mudar de regime, mostre o impacto.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEÇÃO 2: PACIENTES E REAJUSTES -->
+  <div class="section" id="pacientes">
+    <div class="card">
+      <div class="title">👥 Pacientes em Tratamento</div>
+      
+      <div style="margin-bottom: 1.5rem;">
+        <label style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; display: block;">Filtro por tempo:</label>
+        <select id="filtro-tempo" style="width: 100%; padding: 10px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--surface-1); font-size: 14px;">
+          <option value="todos">Todos os pacientes</option>
+          <option value="proximo-12">Completam 12 meses nos próximos 90 dias</option>
+          <option value="passado-12">Já completaram 12 meses (reajuste sugerido)</option>
+          <option value="novo">Menos de 3 meses (muito novo)</option>
+        </select>
+      </div>
+
+      <div id="pacientes-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const pacientesData = [
+  { id: 1, nome: 'Maria Santos', inicio: '2023-05-15', valor: 350, sessoes: 45, regimeAtual: 'pf' },
+  { id: 2, nome: 'Carlos Oliveira', inicio: '2023-08-22', valor: 300, sessoes: 38, regimeAtual: 'simples' },
+  { id: 3, nome: 'Ana Costa', inicio: '2024-01-10', valor: 250, sessoes: 24, regimeAtual: 'pf' },
+  { id: 4, nome: 'Patricia Lima', inicio: '2024-03-05', valor: 320, sessoes: 20, regimeAtual: 'simples' },
+  { id: 5, nome: 'Roberto Alves', inicio: '2024-06-18', valor: 280, sessoes: 15, regimeAtual: 'pf' },
+  { id: 6, nome: 'Fernanda Silva', inicio: '2024-11-30', valor: 350, sessoes: 6, regimeAtual: 'pf' },
+];
+
+const ISS_RATES = { sp: 0.02, rj: 0.03, mg: 0.025, ba: 0.05 };
+
+function calcularImpostos() {
+  const valor = parseFloat(document.getElementById('valor-sessao').value) || 0;
+  const municipio = document.getElementById('municipio').value;
+  const iss = ISS_RATES[municipio];
+
+  const impostos = {
+    pf: {
+      iss: valor * iss,
+      irpf: valor * 0.15,
+      inss: valor * 0.10,
+      total: valor * (iss + 0.15 + 0.10),
+    },
+    simples: {
+      iss: valor * iss,
+      das: valor * 0.07,
+      total: valor * (iss + 0.07),
+    },
+    presumido: {
+      iss: valor * iss,
+      irpf: valor * 0.072,
+      piscofins: valor * 0.0965,
+      inss: valor * 0.15,
+      total: valor * (iss + 0.072 + 0.0965 + 0.15),
+    },
+  };
+
+  return { impostos, iss, valor };
+}
+
+function renderResultado() {
+  const { impostos, iss, valor } = calcularImpostos();
+  const regime = document.querySelector('.regime-btn.active').dataset.regime;
+  const resultado = impostos[regime];
+  const liquido = valor - resultado.total;
+  const taxaPercent = ((resultado.total / valor) * 100).toFixed(1);
+
+  let html = `
+    <div class="calculation-result">
+      <div class="result-row">
+        <span class="result-label">Valor bruto:</span>
+        <span class="result-value">R$ ${valor.toFixed(2)}</span>
+      </div>
+  `;
+
+  if (regime === 'pf') {
+    html += `
+      <div class="result-row">
+        <span class="result-label">ISS (${(iss * 100).toFixed(1)}%):</span>
+        <span class="result-value">-R$ ${resultado.iss.toFixed(2)}</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">Carnê-Leão (15%):</span>
+        <span class="result-value">-R$ ${resultado.irpf.toFixed(2)}</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">INSS (10%):</span>
+        <span class="result-value">-R$ ${resultado.inss.toFixed(2)}</span>
+      </div>
+    `;
+  } else if (regime === 'simples') {
+    html += `
+      <div class="result-row">
+        <span class="result-label">DAS Simples (7%):</span>
+        <span class="result-value">-R$ ${resultado.das.toFixed(2)}</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">ISS (${(iss * 100).toFixed(1)}%):</span>
+        <span class="result-value">-R$ ${resultado.iss.toFixed(2)}</span>
+      </div>
+    `;
+  } else {
+    html += `
+      <div class="result-row">
+        <span class="result-label">ISS (${(iss * 100).toFixed(1)}%):</span>
+        <span class="result-value">-R$ ${resultado.iss.toFixed(2)}</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">IRPJ + CSLL (7,2%):</span>
+        <span class="result-value">-R$ ${resultado.irpf.toFixed(2)}</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">PIS + COFINS (9,65%):</span>
+        <span class="result-value">-R$ ${resultado.piscofins.toFixed(2)}</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">INSS pró-labore (15%):</span>
+        <span class="result-value">-R$ ${resultado.inss.toFixed(2)}</span>
+      </div>
+    `;
+  }
+
+  html += `
+    <div class="result-row" style="border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px; font-size: 15px;">
+      <span class="result-label" style="font-weight: 500;">Total impostos:</span>
+      <span class="result-value highlight">-R$ ${resultado.total.toFixed(2)} (${taxaPercent}%)</span>
+    </div>
+    <div class="result-row" style="border-top: 0; padding-top: 0;">
+      <span class="result-label" style="font-weight: 500;">Valor líquido:</span>
+      <span class="result-value highlight" style="color: var(--text-success);">R$ ${liquido.toFixed(2)}</span>
+    </div>
+  `;
+
+  document.getElementById('resultado-regime').innerHTML = html;
+  renderTaxBreakdown(regime, resultado, valor);
+  renderComparativo(valor);
+}
+
+function renderTaxBreakdown(regime, resultado, valor) {
+  let html = '';
+  const iss = parseFloat(document.getElementById('municipio').value === 'sp' ? 0.02 : 0.03);
+
+  if (regime === 'pf') {
+    html = `
+      <div class="tax-box">
+        <div class="tax-name">ISS</div>
+        <div class="tax-value">-${(iss * 100).toFixed(1)}%</div>
+        <div class="tax-percent">R$ ${resultado.iss.toFixed(2)}</div>
+      </div>
+      <div class="tax-box">
+        <div class="tax-name">Carnê-Leão</div>
+        <div class="tax-value">-15%</div>
+        <div class="tax-percent">R$ ${resultado.irpf.toFixed(2)}</div>
+      </div>
+      <div class="tax-box">
+        <div class="tax-name">INSS</div>
+        <div class="tax-value">-10%</div>
+        <div class="tax-percent">R$ ${resultado.inss.toFixed(2)}</div>
+      </div>
+    `;
+  } else if (regime === 'simples') {
+    html = `
+      <div class="tax-box">
+        <div class="tax-name">DAS Simples</div>
+        <div class="tax-value">-7%</div>
+        <div class="tax-percent">R$ ${resultado.das.toFixed(2)}</div>
+      </div>
+      <div class="tax-box">
+        <div class="tax-name">ISS</div>
+        <div class="tax-value">-${(iss * 100).toFixed(1)}%</div>
+        <div class="tax-percent">R$ ${resultado.iss.toFixed(2)}</div>
+      </div>
+    `;
+  } else {
+    html = `
+      <div class="tax-box">
+        <div class="tax-name">ISS</div>
+        <div class="tax-value">-${(iss * 100).toFixed(1)}%</div>
+        <div class="tax-percent">R$ ${resultado.iss.toFixed(2)}</div>
+      </div>
+      <div class="tax-box">
+        <div class="tax-name">IRPJ + CSLL</div>
+        <div class="tax-value">-7,2%</div>
+        <div class="tax-percent">R$ ${resultado.irpf.toFixed(2)}</div>
+      </div>
+      <div class="tax-box">
+        <div class="tax-name">PIS/COFINS</div>
+        <div class="tax-value">-9,65%</div>
+        <div class="tax-percent">R$ ${resultado.piscofins.toFixed(2)}</div>
+      </div>
+    `;
+  }
+
+  document.getElementById('tax-breakdown').innerHTML = html;
+}
+
+function renderComparativo(valor) {
+  const { impostos } = calcularImpostos();
+  
+  const pf = (impostos.pf.total / valor * 100).toFixed(1);
+  const simples = (impostos.simples.total / valor * 100).toFixed(1);
+  const presumido = (impostos.presumido.total / valor * 100).toFixed(1);
+
+  document.getElementById('comp-pf-valor').textContent = `R$ ${(valor - impostos.pf.total).toFixed(2)}`;
+  document.getElementById('comp-pf-tax').textContent = pf + '%';
+
+  document.getElementById('comp-simples-valor').textContent = `R$ ${(valor - impostos.simples.total).toFixed(2)}`;
+  document.getElementById('comp-simples-tax').textContent = simples + '%';
+
+  document.getElementById('comp-presumido-valor').textContent = `R$ ${(valor - impostos.presumido.total).toFixed(2)}`;
+  document.getElementById('comp-presumido-tax').textContent = presumido + '%';
+}
+
+function calcularDiasEmTratamento(dataInicio) {
+  const hoje = new Date();
+  const inicio = new Date(dataInicio);
+  const dias = Math.floor((hoje - inicio) / (1000 * 60 * 60 * 24));
+  return dias;
+}
+
+function renderPacientes() {
+  const filtro = document.getElementById('filtro-tempo').value;
+  let pacientesFiltrados = pacientesData;
+
+  const agora = new Date();
+
+  pacientesFiltrados = pacientesData.filter(p => {
+    const dias = calcularDiasEmTratamento(p.inicio);
+    
+    if (filtro === 'proximo-12') {
+      const dias12 = 365;
+      const dias90 = 90;
+      return dias >= dias12 - dias90 && dias < dias12;
+    }
+    if (filtro === 'passado-12') {
+      return dias >= 365;
+    }
+    if (filtro === 'novo') {
+      return dias < 90;
+    }
+    return true;
+  });
+
+  let html = '';
+
+  pacientesFiltrados.forEach(p => {
+    const dias = calcularDiasEmTratamento(p.inicio);
+    const meses = Math.floor(dias / 30);
+    const dataInicio = new Date(p.inicio).toLocaleDateString('pt-BR');
+    
+    const dias12 = 365;
+    const alertaReajuste = dias >= dias12;
+    const proximoReajuste = dias >= dias12 - 90 && dias < dias12;
+
+    const novoValor = Math.round(p.valor * 1.10 * 100) / 100;
+    const aumento = novoValor - p.valor;
+
+    html += `
+      <div class="patient-row">
+        <div class="patient-header">
+          <div>
+            <div class="patient-name-big">${p.nome}</div>
+            <div class="patient-details">Desde ${dataInicio} • ${meses} meses (${dias} dias)</div>
+          </div>
+          <div>
+            ${alertaReajuste ? '<span class="badge badge-reajuste">⚠️ REAJUSTE</span>' : ''}
+            ${proximoReajuste ? '<span class="badge badge-alert">📅 Próximo em breve</span>' : ''}
+            ${dias < 90 ? '<span class="badge badge-active">✨ Recente</span>' : ''}
+          </div>
+        </div>
+
+        <div style="margin: 12px 0; padding: 12px 0; border-top: 0.5px solid var(--border); border-bottom: 0.5px solid var(--border);">
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; font-size: 12px;">
+            <div>
+              <span style="color: var(--text-secondary);">Sessões:</span>
+              <strong style="display: block; margin-top: 4px; font-size: 14px;">${p.sessoes}</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-secondary);">Valor atual:</span>
+              <strong style="display: block; margin-top: 4px; font-size: 14px;">R$ ${p.valor.toFixed(2)}</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-secondary);">Total recebido:</span>
+              <strong style="display: block; margin-top: 4px; font-size: 14px; color: var(--text-accent);">R$ ${(p.valor * p.sessoes).toFixed(2)}</strong>
+            </div>
+          </div>
+        </div>
+
+        ${alertaReajuste ? `
+          <div class="reajuste-info">
+            <strong>📈 Sugestão de reajuste de 10%:</strong><br>
+            R$ ${p.valor.toFixed(2)} → <strong>R$ ${novoValor.toFixed(2)}</strong> (+R$ ${aumento.toFixed(2)})<br>
+            <br>
+            💡 <em>Paciente está há ${meses} meses. Reajuste anual é comum na prática clínica.</em>
+            <br>
+            <button class="btn btn-small" onclick="alert('Reajuste registrado para ${p.nome}! Nova sessão: R$ ${novoValor.toFixed(2)}')">Aplicar reajuste</button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  });
+
+  if (pacientesFiltrados.length === 0) {
+    html = '<div style="padding: 1rem; text-align: center; color: var(--text-secondary);">Nenhum paciente neste filtro</div>';
+  }
+
+  document.getElementById('pacientes-list').innerHTML = html;
+}
+
+document.querySelectorAll('.regime-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.regime-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderResultado();
+  });
+});
+
+document.querySelectorAll('.header-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.header-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'pacientes') {
+      renderPacientes();
+    }
+  });
+});
+
+document.getElementById('valor-sessao').addEventListener('input', renderResultado);
+document.getElementById('municipio').addEventListener('change', renderResultado);
+document.getElementById('filtro-tempo').addEventListener('change', renderPacientes);
+
+renderResultado();
+</script>
+</div>
