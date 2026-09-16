@@ -9,7 +9,7 @@ import { PatientFormPage } from './pages/PatientFormPage'
 import { PatientDetailPage } from './pages/PatientDetailPage'
 import { SessionRecordPage } from './pages/SessionRecordPage'
 import { FinancePage } from './pages/FinancePage'
-import { PlaceholderPage } from './pages/PlaceholderPage'
+import { TaxPage } from './pages/TaxPage'
 import type { ReactNode } from 'react'
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -40,7 +40,7 @@ export function App() {
             <Route path="/agenda" element={<AgendaPage />} />
             <Route path="/agenda/:id" element={<SessionRecordPage />} />
             <Route path="/financeiro" element={<FinancePage />} />
-            <Route path="/tributos" element={<PlaceholderPage title="Tributos" task="T-019" />} />
+            <Route path="/tributos" element={<TaxPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
