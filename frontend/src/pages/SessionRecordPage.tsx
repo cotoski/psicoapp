@@ -39,10 +39,14 @@ export function SessionRecordPage() {
 
   useEffect(() => {
     if (!id) return
-    Promise.all([
-      apiGet<Appointment>(`/appointments/${id}`),
-      apiGet<SessionRecord | null>(`/appointments/${id}/record`),
-    ])
+    // Prontuário inexistente é 404 (RECORD_NOT_FOUND) — não é erro de página.
+    const fetchRecord = apiGet<SessionRecord>(`/appointments/${id}/record`).catch(
+      (err) => {
+        if (err instanceof ApiError && err.code === 'RECORD_NOT_FOUND') return null
+        throw err
+      },
+    )
+    Promise.all([apiGet<Appointment>(`/appointments/${id}`), fetchRecord])
       .then(([a, r]) => {
         setAppt(a)
         setRecord(r)

@@ -8,6 +8,8 @@ export default defineConfig({
     // Bind mounts do Docker Desktop no Windows nem sempre propagam eventos de
     // arquivo — polling garante o HMR funcionar dentro do container.
     watch: { usePolling: true },
+    // Permite acesso do container Playwright via host.docker.internal (dev only).
+    allowedHosts: ['host.docker.internal'],
     proxy: {
       // Dev: mesmo origin para o cookie de refresh (SameSite=strict) funcionar.
       '/api': {

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import {
   apiGet,
   apiPost,
+  refreshSession,
   setAccessToken,
   setSessionExpiredHandler,
   type AuthUser,
@@ -23,12 +24,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setSessionExpiredHandler(() => setUser(null))
     // Sessão persiste via cookie de refresh: ao abrir a app, tenta renovar.
-    apiPost<{ user: AuthUser; accessToken: string }>('/auth/refresh')
-      .then((res) => {
-        setAccessToken(res.accessToken)
-        setUser(res.user)
-      })
-      .catch(() => setUser(null))
+    // refreshSession é deduplicado — StrictMode monta o effect 2× sem que o
+    // segundo refresh dispare a detecção de reuso no backend.
+    refreshSession()
+      .then((res) => setUser(res?.user ?? null))
       .finally(() => setLoading(false))
   }, [])
 

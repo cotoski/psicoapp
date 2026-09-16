@@ -28,7 +28,7 @@ export interface AuthUser {
 
 let accessToken: string | null = null
 let onSessionExpired: (() => void) | null = null
-let refreshing: Promise<boolean> | null = null
+let refreshing: Promise<RefreshResult | null> | null = null
 
 export function setAccessToken(token: string | null) {
   accessToken = token
@@ -38,22 +38,37 @@ export function setSessionExpiredHandler(fn: () => void) {
   onSessionExpired = fn
 }
 
-async function tryRefresh(): Promise<boolean> {
+interface RefreshResult {
+  user: AuthUser
+  accessToken: string
+}
+
+/**
+ * Refresh deduplicado: chamadas concorrentes (ex.: StrictMode montando o
+ * effect 2×, ou várias requests 401 simultâneas) compartilham a mesma
+ * promessa — sem isso, dois refreshes com o mesmo cookie disparam a
+ * detecção de reuso do backend e revogam a cadeia inteira.
+ */
+export function refreshSession(): Promise<RefreshResult | null> {
   refreshing ??= fetch(`${BASE}/auth/refresh`, {
     method: 'POST',
     credentials: 'include',
   })
     .then(async (res) => {
-      if (!res.ok) return false
-      const data = (await res.json()) as { accessToken: string }
+      if (!res.ok) return null
+      const data = (await res.json()) as RefreshResult
       accessToken = data.accessToken
-      return true
+      return data
     })
-    .catch(() => false)
+    .catch(() => null)
     .finally(() => {
       refreshing = null
     })
   return refreshing
+}
+
+async function tryRefresh(): Promise<boolean> {
+  return (await refreshSession()) !== null
 }
 
 async function rawRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
