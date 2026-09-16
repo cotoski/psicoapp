@@ -5,6 +5,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
+    // Bind mounts do Docker Desktop no Windows nem sempre propagam eventos de
+    // arquivo — polling garante o HMR funcionar dentro do container.
+    watch: { usePolling: true },
     proxy: {
       // Dev: mesmo origin para o cookie de refresh (SameSite=strict) funcionar.
       '/api': {

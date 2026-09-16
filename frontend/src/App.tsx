@@ -3,6 +3,9 @@ import { AuthProvider, useAuth } from './auth/AuthContext'
 import { AppLayout } from './components/AppLayout'
 import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { PatientsPage } from './pages/PatientsPage'
+import { PatientFormPage } from './pages/PatientFormPage'
+import { PatientDetailPage } from './pages/PatientDetailPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import type { ReactNode } from 'react'
 
@@ -27,7 +30,10 @@ export function App() {
             }
           >
             <Route path="/" element={<DashboardPage />} />
-            <Route path="/pacientes" element={<PlaceholderPage title="Pacientes" task="T-015" />} />
+            <Route path="/pacientes" element={<PatientsPage />} />
+            <Route path="/pacientes/novo" element={<PatientFormPage />} />
+            <Route path="/pacientes/:id" element={<PatientDetailPage />} />
+            <Route path="/pacientes/:id/editar" element={<PatientFormPage />} />
             <Route path="/agenda" element={<PlaceholderPage title="Agenda" task="T-016" />} />
             <Route path="/financeiro" element={<PlaceholderPage title="Financeiro" task="T-018" />} />
             <Route path="/tributos" element={<PlaceholderPage title="Tributos" task="T-019" />} />

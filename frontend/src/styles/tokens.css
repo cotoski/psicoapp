@@ -92,6 +92,20 @@ html, body {
 .session-time { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
 .session-patient { font-size: 14px; font-weight: 500; margin: 6px 0; }
 
+.patient-row { background: var(--surface-1); border: 0.5px solid var(--border); padding: 1rem; border-radius: var(--radius); margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s; }
+.patient-row:hover { background: var(--fill-ghost-hover); }
+.patient-info h4 { margin: 0; font-size: 14px; font-weight: 500; }
+.patient-info p { margin: 4px 0 0; font-size: 12px; color: var(--text-secondary); }
+.pill { display: inline-block; padding: 4px 10px; margin-right: 6px; margin-bottom: 6px; border-radius: 12px; font-size: 12px; background: var(--bg-accent); color: var(--text-accent); cursor: pointer; border: 0.5px solid transparent; }
+.pill.active { background: var(--fill-accent); color: var(--on-accent); }
+.toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+.toolbar input[type="search"], .toolbar select { padding: 8px 12px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--surface-1); font-size: 14px; }
+.toolbar input[type="search"] { flex: 1; min-width: 200px; }
+.pager { display: flex; gap: 8px; align-items: center; justify-content: center; margin-top: 1rem; font-size: 13px; color: var(--text-secondary); }
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px 24px; font-size: 13px; }
+.detail-grid dt { color: var(--text-secondary); margin-bottom: 2px; }
+.detail-grid dd { margin: 0; color: var(--text-primary); font-weight: 500; }
+
 .loading-state { font-size: 13px; color: var(--text-secondary); padding: 1rem 0; }
 .empty-state { font-size: 13px; color: var(--text-muted); padding: 1rem 0; }
 .alert-error { background: var(--bg-danger); color: var(--text-danger); border-radius: var(--radius); padding: 10px 12px; font-size: 13px; margin-bottom: 1rem; }
