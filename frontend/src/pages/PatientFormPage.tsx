@@ -140,6 +140,8 @@ export function PatientFormPage() {
   if (loading) return <div className="loading-state">Carregando…</div>
 
   const geraAgenda = form.diasSemana.length > 0 && Boolean(form.horario)
+  const agendaIncompleta =
+    !geraAgenda && (form.diasSemana.length > 0 || Boolean(form.horario))
 
   return (
     <div style={{ maxWidth: 640 }}>
@@ -189,6 +191,12 @@ export function PatientFormPage() {
           <Input label="Ciclo de reajuste (meses)" name="mesesCiclo" type="number" min={1} max={36} value={form.mesesCiclo} onChange={(e) => set('mesesCiclo', e.target.value)} />
           <Input label="Data do próximo reajuste" name="dataReajuste" type="date" value={form.dataReajuste} onChange={(e) => set('dataReajuste', e.target.value)} />
           <Input label="Sala / link de reunião" name="salaReuniao" value={form.salaReuniao} onChange={(e) => set('salaReuniao', e.target.value)} />
+          {agendaIncompleta && (
+            <p className="alert-error">
+              Para gerar os agendamentos automaticamente, selecione os dias da
+              semana <strong>e</strong> o horário.
+            </p>
+          )}
           {!editing && geraAgenda && (
             <p className="section-subtitle">
               Ao salvar, a agenda será gerada até a data de reajuste.
