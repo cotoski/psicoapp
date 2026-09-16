@@ -23,6 +23,7 @@ export function requireAuth(config: Config): RequestHandler {
     }
     try {
       const payload = jwt.verify(header.slice(7), config.JWT_SECRET, {
+        algorithms: ['HS256'],
         issuer: 'psicoapp',
         audience: 'psicoapp-api',
       }) as { sub: string; tid: string; role: AuthContext['role'] }

@@ -278,4 +278,34 @@ src/
 
 ---
 
+## 12. Errata — implementação no rebuild (backend `modules/tax`)
+
+A spec original foi escrita para o protótipo (frontend `TributaryCalculator.tsx`).
+No rebuild o cálculo foi para o backend: `backend/src/modules/tax/taxCalculations.ts`,
+exposto via `POST /api/v1/tax/fator-r` e consumido por
+`frontend/src/components/tributary/FatorRCalculator.tsx`.
+
+### Correção de ponto flutuante (bug na fórmula da §4)
+
+A fórmula literal `Math.ceil(faturamentoAnual * 0.28)` falha no próprio
+teste §7.5: em IEEE-754, `96000 * 0.28 = 26880.000000000004`, e `Math.ceil`
+arredonda para **26.881** — R$ 1 acima do esperado 26.880.
+
+Implementação adotada (aritmética inteira antes do ceil):
+
+```ts
+const prolaboreAnualNecessario = Math.ceil((faturamentoAnual * 28) / 100)
+```
+
+O multiplicar por inteiro preserva o resultado exato para valores monetários
+típicos (2 casas decimais × 28 não produz dizimação), e o `Math.ceil` continua
+garantindo que o valor sugerido nunca fique abaixo do limiar (teste §7.6).
+
+### Divergências de escopo
+
+- Alíquotas continuam sendo **faixa 1 simplificada** conforme §4 — a tabela
+  progressiva completa fica para iteração futura (estrutura já é array de faixas).
+- `tax_config` no rebuild inclui os campos da §6 por tenant; o Fator R é
+  sempre calculado no servidor, nunca editado manualmente.
+
 **Fim da especificação.** Qualquer ambiguidade não coberta aqui deve seguir o padrão de código já existente no restante do repositório (nomenclatura em português para domínio de negócio, componentes em inglês/PascalCase, CSS em arquivo separado por componente).

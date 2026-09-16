@@ -8,6 +8,7 @@ export function signAccessToken(user: AuthContext, config: Config): string {
     { sub: user.userId, tid: user.tenantId, role: user.role },
     config.JWT_SECRET,
     {
+      algorithm: 'HS256',
       expiresIn: config.ACCESS_TOKEN_TTL_SECONDS,
       issuer: 'psicoapp',
       audience: 'psicoapp-api',
