@@ -7,6 +7,8 @@ import type { Config } from './config.js'
 import type { Logger } from './shared/logger.js'
 import type { Db } from './db/client.js'
 import { requestId } from './shared/middleware/requestId.js'
+import { metricsMiddleware } from './shared/middleware/metrics.js'
+import { register } from './shared/metrics.js'
 import { errorHandler, notFound } from './shared/errors.js'
 import { healthRouter, type ReadinessCheck } from './modules/health/routes.js'
 import { identityRouter } from './modules/identity/routes.js'
@@ -51,8 +53,16 @@ export function createApp({ config, logger, db, readinessChecks = [] }: AppDeps)
   app.use(cors({ origin: config.corsOrigins, credentials: true }))
   app.use(express.json({ limit: '100kb' }))
   app.use(cookieParser())
+  app.use(metricsMiddleware)
 
   app.use('/health', healthRouter(readinessChecks))
+
+  // Métricas Prometheus — exposto sem auth para scrape; em produção
+  // restringir por rede/ingress (ver docs/observability.md).
+  app.get('/metrics', async (_req, res) => {
+    res.set('Content-Type', register.contentType)
+    res.send(await register.metrics())
+  })
 
   const api = express.Router()
   api.use('/auth', identityRouter({ db, config }))

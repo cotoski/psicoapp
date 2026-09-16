@@ -1,5 +1,9 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express'
 import { ZodError } from 'zod'
+import { authFailures, permissionDenied } from './metrics.js'
+
+const AUTH_CODES = new Set(['UNAUTHORIZED', 'INVALID_CREDENTIALS', 'TOKEN_EXPIRED'])
+const DENIED_CODES = new Set(['FORBIDDEN', 'TENANT_MISMATCH'])
 
 export class AppError extends Error {
   constructor(
@@ -27,6 +31,8 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   const requestId = req.id
 
   if (err instanceof AppError) {
+    if (AUTH_CODES.has(err.code)) authFailures.inc({ code: err.code })
+    if (DENIED_CODES.has(err.code)) permissionDenied.inc({ code: err.code })
     if (err.statusCode >= 500) {
       req.log?.error({ err }, 'app error')
     } else {
