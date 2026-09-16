@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: psicoapp
+          POSTGRES_PASSWORD: ci-postgres-password
+          POSTGRES_DB: psicoapp
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U psicoapp"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://psicoapp:ci-postgres-password@localhost:5432/psicoapp
+      NODE_ENV: test
+      JWT_SECRET: ci-jwt-secret-for-tests-only-0123456789abcdef
+      FIELD_ENCRYPTION_KEY: ci-field-encryption-key-for-tests-0123456789
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install
+        working-directory: backend
+        run: npm ci
+
+      - name: Lint
+        working-directory: backend
+        run: npm run lint
+
+      - name: Typecheck
+        working-directory: backend
+        run: npm run typecheck
+
+      - name: Test (com Postgres real — inclui isolamento de tenant)
+        working-directory: backend
+        run: npm test
+
+      - name: Build
+        working-directory: backend
+        run: npm run build
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks (secrets no histórico)
+        uses: gitleaks/gitleaks-action@v2
+
+      - name: npm audit (high+)
+        working-directory: backend
+        run: npm audit --audit-level=high --omit=dev
+
+      - name: Semgrep (OWASP + Node)
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: >-
+            p/owasp-top-ten
+            p/nodejs
+            p/javascript
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
