@@ -1,5 +1,11 @@
 # LEGADO — protótipo arquivado. Contém defaults inseguros apenas para dev local.
 # NUNCA usar com dados reais. Ver docs/product-engineering-assessment.md §2.
+#
+# Projeto isolado: psicoapp-legacy. Reutiliza o volume original
+# psicoapp_db_data (PostgreSQL 15) — dados do protótipo preservados.
+# Portas: db em 127.0.0.1:5433 (5432 pertence ao ambiente novo).
+name: psicoapp-legacy
+
 services:
   db:
     image: postgres:15-alpine
@@ -12,7 +18,7 @@ services:
       - db_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5433:5432"
 
   backend:
     build: ./backend
@@ -42,3 +48,4 @@ services:
 
 volumes:
   db_data:
+    name: psicoapp_db_data
