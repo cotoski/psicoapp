@@ -10,6 +10,9 @@ import { requestId } from './shared/middleware/requestId.js'
 import { errorHandler, notFound } from './shared/errors.js'
 import { healthRouter, type ReadinessCheck } from './modules/health/routes.js'
 import { identityRouter } from './modules/identity/routes.js'
+import { tenantsRouter } from './modules/tenants/routes.js'
+import { requireAuth } from './shared/middleware/auth.js'
+import { tenantContext } from './shared/middleware/tenancy.js'
 
 export interface AppDeps {
   config: Config
@@ -44,6 +47,10 @@ export function createApp({ config, logger, db, readinessChecks = [] }: AppDeps)
 
   const api = express.Router()
   api.use('/auth', identityRouter({ db, config }))
+
+  // Default-deny: tudo abaixo exige auth + tenant válido no banco
+  api.use(requireAuth(config), tenantContext(db))
+  api.use('/tenants', tenantsRouter({ db }))
   app.use('/api/v1', api)
 
   app.use(notFound)

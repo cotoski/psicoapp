@@ -40,11 +40,17 @@ describe('health checks', () => {
 
 describe('convenções de API', () => {
   it('rota desconhecida retorna erro no formato padrão', async () => {
-    const res = await request(app).get('/api/v1/nao-existe')
+    const res = await request(app).get('/nao-existe')
     expect(res.status).toBe(404)
     expect(res.body.error.code).toBe('NOT_FOUND')
     expect(res.body.error.requestId).toBeTruthy()
     expect(res.body).not.toHaveProperty('stack')
+  })
+
+  it('rota de API desconhecida sem auth → 401 (default-deny, não revela rotas)', async () => {
+    const res = await request(app).get('/api/v1/nao-existe')
+    expect(res.status).toBe(401)
+    expect(res.body.error.code).toBe('UNAUTHORIZED')
   })
 
   it('gera x-request-id e ecoa o header quando fornecido', async () => {

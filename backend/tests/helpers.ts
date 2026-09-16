@@ -1,3 +1,5 @@
+import request from 'supertest'
+import jwt from 'jsonwebtoken'
 import { loadConfig, type Config } from '../src/config.js'
 import { buildLogger } from '../src/shared/logger.js'
 import { createDb, type Db } from '../src/db/client.js'
@@ -27,4 +29,30 @@ export async function truncateAll(db: Db) {
   await db.execute(
     'TRUNCATE audit_events, session_records, appointments, patients, tax_config, refresh_tokens, users, tenants CASCADE',
   )
+}
+
+export interface TestPrincipal {
+  token: string
+  userId: string
+  tenantId: string
+  email: string
+}
+
+// Registra um tenant+usuário e retorna credenciais de teste.
+// Dois pricipais = dois tenants isolados (asTenantA / asTenantB).
+export async function registerUserAs(
+  app: import('express').Express,
+  email: string,
+): Promise<TestPrincipal> {
+  const res = await request(app)
+    .post('/api/v1/auth/register')
+    .send({
+      email,
+      password: 'senha-forte-123',
+      nome: 'Teste',
+      tenantName: `Tenant ${email}`,
+    })
+  if (res.status !== 201) throw new Error(`register falhou: ${JSON.stringify(res.body)}`)
+  const payload = jwt.decode(res.body.accessToken) as { sub: string; tid: string }
+  return { token: res.body.accessToken, userId: payload.sub, tenantId: payload.tid, email }
 }
