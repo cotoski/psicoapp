@@ -11,6 +11,7 @@ import { errorHandler, notFound } from './shared/errors.js'
 import { healthRouter, type ReadinessCheck } from './modules/health/routes.js'
 import { identityRouter } from './modules/identity/routes.js'
 import { tenantsRouter } from './modules/tenants/routes.js'
+import { patientsRouter } from './modules/patients/routes.js'
 import { requireAuth } from './shared/middleware/auth.js'
 import { tenantContext } from './shared/middleware/tenancy.js'
 
@@ -51,6 +52,7 @@ export function createApp({ config, logger, db, readinessChecks = [] }: AppDeps)
   // Default-deny: tudo abaixo exige auth + tenant válido no banco
   api.use(requireAuth(config), tenantContext(db))
   api.use('/tenants', tenantsRouter({ db }))
+  api.use('/patients', patientsRouter({ db, config }))
   app.use('/api/v1', api)
 
   app.use(notFound)
