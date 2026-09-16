@@ -31,6 +31,11 @@ export function billingRouter({ db }: { db: Db }): Router {
     res.json(await service.invoice(actor(req), input))
   })
 
+  router.get('/invoiced', requirePermission(db, 'billing:read'), async (req, res) => {
+    const q = summarySchema.parse(req.query)
+    res.json(await service.invoiced(actor(req), q))
+  })
+
   return router
 }
 

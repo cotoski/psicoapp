@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { apiGet, apiPost, ApiError } from '../api/client'
+import { NotaDocCard, type NotaDoc } from '../components/billing/NotaDoc'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { Card, MetricCard } from '../components/ui/Card'
@@ -33,35 +34,6 @@ interface Summary {
   pendenteFaturamento: number
 }
 
-interface NotaDoc {
-  prestador: { nome: string; responsavel: string | null; crp: string | null }
-  tomador: {
-    nome: string
-    cpf: string | null
-    email: string | null
-    telefone: string | null
-  }
-  competencia: string
-  emitidaEm: string
-  itens: {
-    descricao: string
-    data: string
-    quantidade: number
-    valorUnitario: number
-    valorTotal: number
-  }[]
-  discriminacao: string
-  valorBruto: number
-  tributos: {
-    regime: string | null
-    municipio: string | null
-    issAliquota: number
-    linhas: { label: string; valor: number }[]
-    total: number
-  } | null
-  valorLiquido: number
-}
-
 interface InvoiceResult {
   total: number
   sessoes: {
@@ -75,10 +47,10 @@ interface InvoiceResult {
   notas: NotaDoc[]
 }
 
-const REGIME_LABEL: Record<string, string> = {
-  pf: 'Pessoa Física',
-  simples: 'Simples Nacional',
-  presumido: 'Lucro Presumido',
+interface InvoicedResult {
+  month: string
+  total: number
+  notas: NotaDoc[]
 }
 
 function currentMonth(): string {
@@ -92,6 +64,8 @@ export function FinancePage() {
   const [month, setMonth] = useState(currentMonth())
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [invoice, setInvoice] = useState<InvoiceResult | null>(null)
+  const [invoiced, setInvoiced] = useState<InvoicedResult | null>(null)
+  const [openNota, setOpenNota] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -102,12 +76,15 @@ export function FinancePage() {
     Promise.all([
       apiGet<PendingGroup[]>('/billing/pending'),
       apiGet<Summary>(`/finance/summary?month=${month}`),
+      apiGet<InvoicedResult>(`/billing/invoiced?month=${month}`),
     ])
-      .then(([g, s]) => {
+      .then(([g, s, i]) => {
         setGroups(g)
         setSummary(s)
+        setInvoiced(i)
         setSelected(new Set())
         setInvoice(null)
+        setOpenNota(null)
       })
       .catch(() => setError('Não foi possível carregar o financeiro.'))
       .finally(() => setLoading(false))
@@ -248,105 +225,47 @@ export function FinancePage() {
             </p>
           )}
           {(invoice.notas ?? []).map((n, i) => (
-            <div className="nota-doc" key={i}>
-              <div className="nota-header">
-                <strong>NOTA DE SERVIÇOS — PRÉVIA</strong>
-                <span>
-                  Competência {n.competencia} · Emitida em {fmtDateTime(n.emitidaEm)}
+            <NotaDocCard key={i} nota={n} />
+          ))}
+        </Card>
+      )}
+
+      {invoiced && invoiced.notas.length > 0 && (
+        <Card>
+          <div className="toolbar">
+            <h2 className="section-subtitle" style={{ margin: 0 }}>
+              Faturadas em {invoiced.month} — {fmtMoney(invoiced.total)}
+            </h2>
+            <div style={{ flex: 1 }} />
+            <Button small variant="secondary" onClick={() => window.print()}>
+              Imprimir
+            </Button>
+          </div>
+          {invoiced.notas.map((n, i) => (
+            <div
+              key={i}
+              style={{
+                borderTop: '0.5px solid var(--border)',
+                paddingTop: '0.5rem',
+                marginTop: '0.5rem',
+              }}
+            >
+              <div className="toolbar" style={{ marginBottom: 0 }}>
+                <span style={{ fontSize: 14, fontWeight: 500 }}>{n.tomador.nome}</span>
+                <Badge tone="success">Faturada</Badge>
+                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                  {n.itens.length} sessão(ões) · {fmtMoney(n.valorBruto)}
                 </span>
+                <div style={{ flex: 1 }} />
+                <Button
+                  small
+                  variant="secondary"
+                  onClick={() => setOpenNota(openNota === i ? null : i)}
+                >
+                  {openNota === i ? 'Ocultar nota' : 'Ver nota'}
+                </Button>
               </div>
-
-              <div className="nota-grid">
-                <div className="nota-box">
-                  <h4>Prestador</h4>
-                  <p>{n.prestador.nome}</p>
-                  {n.prestador.responsavel && (
-                    <p>
-                      {n.prestador.responsavel}
-                      {n.prestador.crp ? ` · CRP ${n.prestador.crp}` : ''}
-                    </p>
-                  )}
-                </div>
-                <div className="nota-box">
-                  <h4>Tomador</h4>
-                  <p>{n.tomador.nome}</p>
-                  <p>
-                    {n.tomador.cpf ? `CPF ${n.tomador.cpf}` : 'CPF não informado'}
-                    {n.tomador.email ? ` · ${n.tomador.email}` : ''}
-                  </p>
-                </div>
-              </div>
-
-              <div className="nota-box">
-                <h4>Discriminação do serviço</h4>
-                <p className="nota-discriminacao">{n.discriminacao}</p>
-              </div>
-
-              <table className="nota-table">
-                <thead>
-                  <tr>
-                    <th>Item</th>
-                    <th>Data</th>
-                    <th>Qtde.</th>
-                    <th>Vl. unitário</th>
-                    <th>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {n.itens.map((it, j) => (
-                    <tr key={j}>
-                      <td>{it.descricao}</td>
-                      <td>{it.data}</td>
-                      <td>{it.quantidade}</td>
-                      <td>{fmtMoney(it.valorUnitario)}</td>
-                      <td>{fmtMoney(it.valorTotal)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {n.tributos ? (
-                <table className="nota-table">
-                  <thead>
-                    <tr>
-                      <th>Tributo ({REGIME_LABEL[n.tributos.regime ?? ''] ?? n.tributos.regime})</th>
-                      <th>Alíquota</th>
-                      <th>Valor</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {n.tributos.linhas.map((l) => (
-                      <tr key={l.label}>
-                        <td>{l.label}</td>
-                        <td>
-                          {l.label === 'ISS'
-                            ? `${(n.tributos!.issAliquota * 100).toFixed(2)}%`
-                            : '—'}
-                        </td>
-                        <td>{fmtMoney(l.valor)}</td>
-                      </tr>
-                    ))}
-                    <tr>
-                      <td><strong>Total de tributos (estimado)</strong></td>
-                      <td />
-                      <td><strong>{fmtMoney(n.tributos.total)}</strong></td>
-                    </tr>
-                  </tbody>
-                </table>
-              ) : (
-                <p className="section-subtitle">
-                  Configure regime tributário e município em Tributos para ver a
-                  estimativa de impostos na nota.
-                </p>
-              )}
-
-              <div className="nota-totais">
-                <span>Valor bruto: <strong>{fmtMoney(n.valorBruto)}</strong></span>
-                <span>
-                  Valor líquido (após tributos est.):{' '}
-                  <strong>{fmtMoney(n.valorLiquido)}</strong>
-                </span>
-              </div>
+              {openNota === i && <NotaDocCard nota={n} />}
             </div>
           ))}
         </Card>

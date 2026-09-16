@@ -74,6 +74,35 @@ export class BillingRepo {
       .orderBy(appointments.startsAt)
   }
 
+  // Sessões faturadas em um mês (YYYY-MM) — alimenta a seção "faturadas".
+  async invoicedInMonth(tenantId: string, month: string) {
+    const monthStart = `${month}-01`
+    return this.db
+      .select({
+        id: appointments.id,
+        startsAt: appointments.startsAt,
+        valor: appointments.valor,
+        status: appointments.status,
+        patientId: patients.id,
+        pacienteNome: patients.nome,
+        pacienteCpf: patients.cpf,
+        pacienteEmail: patients.email,
+        pacienteTelefone: patients.telefone,
+      })
+      .from(appointments)
+      .innerJoin(patients, eq(appointments.patientId, patients.id))
+      .where(
+        and(
+          eq(appointments.tenantId, tenantId),
+          eq(appointments.faturada, true),
+          isNull(appointments.deletedAt),
+          sql`${appointments.startsAt} >= ${monthStart}::date`,
+          sql`${appointments.startsAt} < (${monthStart}::date + interval '1 month')`,
+        ),
+      )
+      .orderBy(patients.nome, appointments.startsAt)
+  }
+
   // Dados do prestador para a nota: nome do consultório + responsável (CRP).
   async prestadorInfo(tenantId: string, userId: string) {
     const [t] = await this.db

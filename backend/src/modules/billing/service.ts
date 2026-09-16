@@ -99,6 +99,49 @@ export class BillingService {
     return { total, sessoes, notas }
   }
 
+  // Sessões já faturadas no mês — reconstrói as notas por paciente
+  // (mesmo documento gerado na emissão).
+  async invoiced(actor: ActorCtx, q: SummaryQuery) {
+    const month = q.month ?? currentMonth()
+    const rows = await this.repo.invoicedInMonth(actor.tenantId, month)
+    const [prestador, tax] = await Promise.all([
+      this.repo.prestadorInfo(actor.tenantId, actor.userId),
+      this.repo.taxConfig(actor.tenantId),
+    ])
+    const byPatient = new Map<string, typeof rows>()
+    for (const r of rows) {
+      const list = byPatient.get(r.patientId) ?? []
+      list.push(r)
+      byPatient.set(r.patientId, list)
+    }
+    const notas: NotaDocumento[] = [...byPatient.entries()].map(([, rs]) =>
+      buildNota({
+        prestador,
+        tomador: {
+          nome: rs[0].pacienteNome,
+          cpf: rs[0].pacienteCpf,
+          email: rs[0].pacienteEmail,
+          telefone: rs[0].pacienteTelefone,
+        },
+        sessoes: rs.map((r) => ({
+          id: r.id,
+          startsAt:
+            r.startsAt instanceof Date ? r.startsAt.toISOString() : String(r.startsAt),
+          valor: Number(r.valor),
+        })),
+        regime: (tax?.regime as Regime | null) ?? null,
+        municipio: tax?.municipio ?? null,
+        competencia: month,
+        emitidaEm: new Date(),
+      }),
+    )
+    return {
+      month,
+      total: rows.reduce((s, r) => s + Number(r.valor || 0), 0),
+      notas,
+    }
+  }
+
   async monthlySummary(actor: ActorCtx, q: SummaryQuery) {
     const month = q.month ?? currentMonth()
     const r = await this.repo.monthlySummary(actor.tenantId, month)
