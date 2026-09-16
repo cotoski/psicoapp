@@ -8,6 +8,7 @@ import { AgendaPage } from './pages/AgendaPage'
 import { PatientFormPage } from './pages/PatientFormPage'
 import { PatientDetailPage } from './pages/PatientDetailPage'
 import { SessionRecordPage } from './pages/SessionRecordPage'
+import { FinancePage } from './pages/FinancePage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import type { ReactNode } from 'react'
 
@@ -38,7 +39,7 @@ export function App() {
             <Route path="/pacientes/:id/editar" element={<PatientFormPage />} />
             <Route path="/agenda" element={<AgendaPage />} />
             <Route path="/agenda/:id" element={<SessionRecordPage />} />
-            <Route path="/financeiro" element={<PlaceholderPage title="Financeiro" task="T-018" />} />
+            <Route path="/financeiro" element={<FinancePage />} />
             <Route path="/tributos" element={<PlaceholderPage title="Tributos" task="T-019" />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
