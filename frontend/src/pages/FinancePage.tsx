@@ -33,6 +33,35 @@ interface Summary {
   pendenteFaturamento: number
 }
 
+interface NotaDoc {
+  prestador: { nome: string; responsavel: string | null; crp: string | null }
+  tomador: {
+    nome: string
+    cpf: string | null
+    email: string | null
+    telefone: string | null
+  }
+  competencia: string
+  emitidaEm: string
+  itens: {
+    descricao: string
+    data: string
+    quantidade: number
+    valorUnitario: number
+    valorTotal: number
+  }[]
+  discriminacao: string
+  valorBruto: number
+  tributos: {
+    regime: string | null
+    municipio: string | null
+    issAliquota: number
+    linhas: { label: string; valor: number }[]
+    total: number
+  } | null
+  valorLiquido: number
+}
+
 interface InvoiceResult {
   total: number
   sessoes: {
@@ -43,6 +72,13 @@ interface InvoiceResult {
     pacienteEmail: string | null
     pacienteTelefone: string | null
   }[]
+  notas: NotaDoc[]
+}
+
+const REGIME_LABEL: Record<string, string> = {
+  pf: 'Pessoa Física',
+  simples: 'Simples Nacional',
+  presumido: 'Lucro Presumido',
 }
 
 function currentMonth(): string {
@@ -192,14 +228,120 @@ export function FinancePage() {
 
       {invoice && (
         <Card>
-          <h2 className="section-subtitle">Nota gerada — {fmtMoney(invoice.total)}</h2>
+          <div className="toolbar">
+            <h2 className="section-subtitle" style={{ margin: 0 }}>
+              Notas geradas — {fmtMoney(invoice.total)}
+            </h2>
+            <div style={{ flex: 1 }} />
+            <Button small variant="secondary" onClick={() => window.print()}>
+              Imprimir
+            </Button>
+          </div>
           <p className="section-subtitle">
-            {invoice.sessoes.length} sessão(ões) marcadas como faturadas. Dados de contato para envio:
+            Documento interno (prévia no estilo NFS-e) — a emissão fiscal real
+            exige integração com a prefeitura.
           </p>
-          {invoice.sessoes.map((s) => (
-            <p key={s.id} style={{ fontSize: 13, margin: '4px 0' }}>
-              {s.pacienteNome} — {s.pacienteEmail ?? s.pacienteTelefone ?? 'sem contato'} · {fmtDateTime(s.startsAt)} · {fmtMoney(s.valor)}
-            </p>
+          {invoice.notas.map((n, i) => (
+            <div className="nota-doc" key={i}>
+              <div className="nota-header">
+                <strong>NOTA DE SERVIÇOS — PRÉVIA</strong>
+                <span>
+                  Competência {n.competencia} · Emitida em {fmtDateTime(n.emitidaEm)}
+                </span>
+              </div>
+
+              <div className="nota-grid">
+                <div className="nota-box">
+                  <h4>Prestador</h4>
+                  <p>{n.prestador.nome}</p>
+                  {n.prestador.responsavel && (
+                    <p>
+                      {n.prestador.responsavel}
+                      {n.prestador.crp ? ` · CRP ${n.prestador.crp}` : ''}
+                    </p>
+                  )}
+                </div>
+                <div className="nota-box">
+                  <h4>Tomador</h4>
+                  <p>{n.tomador.nome}</p>
+                  <p>
+                    {n.tomador.cpf ? `CPF ${n.tomador.cpf}` : 'CPF não informado'}
+                    {n.tomador.email ? ` · ${n.tomador.email}` : ''}
+                  </p>
+                </div>
+              </div>
+
+              <div className="nota-box">
+                <h4>Discriminação do serviço</h4>
+                <p className="nota-discriminacao">{n.discriminacao}</p>
+              </div>
+
+              <table className="nota-table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Data</th>
+                    <th>Qtde.</th>
+                    <th>Vl. unitário</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {n.itens.map((it, j) => (
+                    <tr key={j}>
+                      <td>{it.descricao}</td>
+                      <td>{it.data}</td>
+                      <td>{it.quantidade}</td>
+                      <td>{fmtMoney(it.valorUnitario)}</td>
+                      <td>{fmtMoney(it.valorTotal)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {n.tributos ? (
+                <table className="nota-table">
+                  <thead>
+                    <tr>
+                      <th>Tributo ({REGIME_LABEL[n.tributos.regime ?? ''] ?? n.tributos.regime})</th>
+                      <th>Alíquota</th>
+                      <th>Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {n.tributos.linhas.map((l) => (
+                      <tr key={l.label}>
+                        <td>{l.label}</td>
+                        <td>
+                          {l.label === 'ISS'
+                            ? `${(n.tributos!.issAliquota * 100).toFixed(2)}%`
+                            : '—'}
+                        </td>
+                        <td>{fmtMoney(l.valor)}</td>
+                      </tr>
+                    ))}
+                    <tr>
+                      <td><strong>Total de tributos (estimado)</strong></td>
+                      <td />
+                      <td><strong>{fmtMoney(n.tributos.total)}</strong></td>
+                    </tr>
+                  </tbody>
+                </table>
+              ) : (
+                <p className="section-subtitle">
+                  Configure regime tributário e município em Tributos para ver a
+                  estimativa de impostos na nota.
+                </p>
+              )}
+
+              <div className="nota-totais">
+                <span>Valor bruto: <strong>{fmtMoney(n.valorBruto)}</strong></span>
+                <span>
+                  Valor líquido (após tributos est.):{' '}
+                  <strong>{fmtMoney(n.valorLiquido)}</strong>
+                </span>
+              </div>
+            </div>
           ))}
         </Card>
       )}

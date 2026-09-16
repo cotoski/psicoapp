@@ -6,6 +6,11 @@ import { createApp } from '../src/app.js'
 import type { Db } from '../src/db/client.js'
 import { users } from '../src/db/schema.js'
 import { groupPending } from '../src/modules/billing/billing.js'
+import {
+  buildDiscriminacao,
+  buildNota,
+  quantidadePorExtenso,
+} from '../src/modules/billing/invoiceDoc.js'
 import { testConfig, testDb, testLogger, truncateAll, registerUserAs } from './helpers.js'
 
 const hasDb = Boolean(process.env.DATABASE_URL)
@@ -64,6 +69,70 @@ describe('billing.groupPending (unitário — spec B4)', () => {
     expect(byId.p2.pendente).toBe(2)
     expect(byId.p2.valorTotal).toBe(200)
     expect(byId.p3.pronto).toBe(true) // 2 >= 2
+  })
+})
+
+describe('billing.invoiceDoc (unitário — nota estilo NFS-e)', () => {
+  const sess = (iso: string, valor: number) => ({ id: iso, startsAt: iso, valor })
+
+  it('quantidadePorExtenso: 1-20 por extenso, acima em dígitos', () => {
+    expect(quantidadePorExtenso(2)).toBe('DOIS')
+    expect(quantidadePorExtenso(20)).toBe('VINTE')
+    expect(quantidadePorExtenso(34)).toBe('34')
+  })
+
+  it('discriminação: valores iguais usam "N REAIS CADA SESSÃO" + datas', () => {
+    const d = buildDiscriminacao([
+      sess('2026-08-07T14:00:00', 290),
+      sess('2026-08-21T14:00:00', 290),
+    ])
+    expect(d).toBe(
+      'SERVIÇOS PRESTADOS REFERENTES A DOIS (2) ATENDIMENTOS PSICOLÓGICOS ' +
+        'NO VALOR DE 290 REAIS CADA SESSÃO NAS SEGUINTES DATAS: 07/08 E 21/08. ' +
+        'TOTAL: 580 REAIS.',
+    )
+  })
+
+  it('discriminação: valores diferentes detalham por sessão', () => {
+    const d = buildDiscriminacao([
+      sess('2026-08-07T14:00:00', 290),
+      sess('2026-08-21T14:00:00', 250),
+    ])
+    expect(d).toContain('07/08: 290 REAIS')
+    expect(d).toContain('21/08: 250 REAIS')
+    expect(d).toContain('TOTAL: 540 REAIS')
+  })
+
+  it('buildNota: tributos por regime + valor líquido', () => {
+    const nota = buildNota({
+      prestador: { nome: 'Consultório X', responsavel: 'Dra. A', crp: '06/1234' },
+      tomador: { nome: 'Pac', cpf: null, email: null, telefone: null },
+      sessoes: [sess('2026-08-07T14:00:00', 290), sess('2026-08-21T14:00:00', 290)],
+      regime: 'simples',
+      municipio: 'sp',
+      competencia: '2026-08',
+      emitidaEm: new Date('2026-08-30T00:00:00Z'),
+    })
+    expect(nota.valorBruto).toBe(580)
+    expect(nota.tributos!.issAliquota).toBeCloseTo(0.02)
+    const iss = nota.tributos!.linhas.find((l) => l.label === 'ISS')
+    expect(iss!.valor).toBeCloseTo(11.6)
+    expect(nota.tributos!.linhas.some((l) => l.label.startsWith('DAS'))).toBe(true)
+    expect(nota.valorLiquido).toBeCloseTo(580 - 11.6 - 580 * 0.07)
+  })
+
+  it('buildNota sem regime → tributos null, líquido = bruto', () => {
+    const nota = buildNota({
+      prestador: { nome: 'X' },
+      tomador: { nome: 'P', cpf: null, email: null, telefone: null },
+      sessoes: [sess('2026-08-07T14:00:00', 100)],
+      regime: null,
+      municipio: null,
+      competencia: '2026-08',
+      emitidaEm: new Date(),
+    })
+    expect(nota.tributos).toBeNull()
+    expect(nota.valorLiquido).toBe(100)
   })
 })
 
@@ -129,6 +198,16 @@ describe.skipIf(!hasDb)('billing + finance (integração)', () => {
     expect(res.body.sessoes.length).toBe(2)
     expect(res.body.sessoes[0].pacienteNome).toBe('PacA')
     expect(res.body.sessoes[0].pacienteEmail).toBe('pa@x.test')
+
+    // nota por paciente: só PacA; discriminação estilo NFS-e
+    expect(res.body.notas).toHaveLength(1)
+    const nota = res.body.notas[0]
+    expect(nota.tomador.nome).toBe('PacA')
+    expect(nota.valorBruto).toBe(200)
+    expect(nota.itens).toHaveLength(2)
+    expect(nota.discriminacao).toContain('DOIS (2) ATENDIMENTOS')
+    expect(nota.discriminacao).toContain('100 REAIS CADA SESSÃO')
+    expect(nota.discriminacao).toContain('TOTAL: 200 REAIS')
 
     // sB continua não faturada no tenant B
     const checkB = await request(app)

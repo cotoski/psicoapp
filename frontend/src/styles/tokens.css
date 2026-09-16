@@ -135,3 +135,22 @@ html, body {
 .loading-state { font-size: 13px; color: var(--text-secondary); padding: 1rem 0; }
 .empty-state { font-size: 13px; color: var(--text-muted); padding: 1rem 0; }
 .alert-error { background: var(--bg-danger); color: var(--text-danger); border-radius: var(--radius); padding: 10px 12px; font-size: 13px; margin-bottom: 1rem; }
+
+/* Nota de serviços (prévia estilo NFS-e) */
+.nota-doc { border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; margin-top: 12px; background: var(--surface); }
+.nota-header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 0.5px solid var(--border); padding-bottom: 8px; margin-bottom: 10px; font-size: 13px; }
+.nota-header span { font-size: 11px; color: var(--text-muted); }
+.nota-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.nota-box { border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 10px; }
+.nota-box h4 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); }
+.nota-box p { margin: 2px 0; font-size: 13px; }
+.nota-discriminacao { font-size: 13px; line-height: 1.5; }
+.nota-table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0; }
+.nota-table th, .nota-table td { border: 0.5px solid var(--border); padding: 6px 8px; text-align: left; }
+.nota-table th { background: var(--bg-accent); font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+.nota-totais { display: flex; justify-content: space-between; border-top: 0.5px solid var(--border); padding-top: 8px; font-size: 13px; }
+
+@media print {
+  .sidebar, .topbar, .toolbar button, .view-toggle { display: none !important; }
+  .nota-doc { break-inside: avoid; border-color: #999; }
+}

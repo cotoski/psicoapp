@@ -1,6 +1,6 @@
 import { and, count, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
 import type { DbLike } from '../../db/client.js'
-import { appointments, patients } from '../../db/schema.js'
+import { appointments, patients, taxConfig, tenants, users } from '../../db/schema.js'
 
 export class BillingRepo {
   constructor(private db: DbLike) {}
@@ -60,7 +60,9 @@ export class BillingRepo {
         startsAt: appointments.startsAt,
         valor: appointments.valor,
         status: appointments.status,
+        patientId: patients.id,
         pacienteNome: patients.nome,
+        pacienteCpf: patients.cpf,
         pacienteEmail: patients.email,
         pacienteTelefone: patients.telefone,
       })
@@ -70,6 +72,30 @@ export class BillingRepo {
         and(eq(appointments.tenantId, tenantId), inArray(appointments.id, ids)),
       )
       .orderBy(appointments.startsAt)
+  }
+
+  // Dados do prestador para a nota: nome do consultório + responsável (CRP).
+  async prestadorInfo(tenantId: string, userId: string) {
+    const [t] = await this.db
+      .select({ nome: tenants.name })
+      .from(tenants)
+      .where(eq(tenants.id, tenantId))
+      .limit(1)
+    const [u] = await this.db
+      .select({ nome: users.nome, crp: users.crp })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+    return { nome: t?.nome ?? '', responsavel: u?.nome ?? null, crp: u?.crp ?? null }
+  }
+
+  async taxConfig(tenantId: string) {
+    const [row] = await this.db
+      .select({ regime: taxConfig.regime, municipio: taxConfig.municipio })
+      .from(taxConfig)
+      .where(eq(taxConfig.tenantId, tenantId))
+      .limit(1)
+    return row
   }
 
   // Resumo mensal (spec B4/B5): faturado, pendente, por status.

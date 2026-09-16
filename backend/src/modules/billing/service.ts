@@ -1,6 +1,8 @@
 import type { Db } from '../../db/client.js'
 import { recordAudit } from '../audit/service.js'
 import { groupPending } from './billing.js'
+import { buildNota, type NotaDocumento } from './invoiceDoc.js'
+import type { Regime } from '../tax/taxCalculations.js'
 import { BillingRepo } from './repo.js'
 import type { InvoiceInput, SummaryQuery } from './schemas.js'
 
@@ -49,6 +51,42 @@ export class BillingService {
     const ids = marked.map((m) => m.id)
     const sessoes = await this.repo.invoicedSessions(actor.tenantId, ids)
     const total = sessoes.reduce((sum, s) => sum + Number(s.valor || 0), 0)
+
+    // Uma nota por paciente — documento interno (prévia no estilo NFS-e).
+    const [prestador, tax] = await Promise.all([
+      this.repo.prestadorInfo(actor.tenantId, actor.userId),
+      this.repo.taxConfig(actor.tenantId),
+    ])
+    const competencia = currentMonth()
+    const emitidaEm = new Date()
+    const byPatient = new Map<string, typeof sessoes>()
+    for (const s of sessoes) {
+      const list = byPatient.get(s.patientId) ?? []
+      list.push(s)
+      byPatient.set(s.patientId, list)
+    }
+    const notas: NotaDocumento[] = [...byPatient.entries()].map(([, rows]) =>
+      buildNota({
+        prestador,
+        tomador: {
+          nome: rows[0].pacienteNome,
+          cpf: rows[0].pacienteCpf,
+          email: rows[0].pacienteEmail,
+          telefone: rows[0].pacienteTelefone,
+        },
+        sessoes: rows.map((r) => ({
+          id: r.id,
+          startsAt:
+            r.startsAt instanceof Date ? r.startsAt.toISOString() : String(r.startsAt),
+          valor: Number(r.valor),
+        })),
+        regime: (tax?.regime as Regime | null) ?? null,
+        municipio: tax?.municipio ?? null,
+        competencia,
+        emitidaEm,
+      }),
+    )
+
     await recordAudit(this.db, {
       tenantId: actor.tenantId,
       actorUserId: actor.userId,
@@ -58,7 +96,7 @@ export class BillingService {
       ip: actor.ip,
       requestId: actor.requestId,
     })
-    return { total, sessoes }
+    return { total, sessoes, notas }
   }
 
   async monthlySummary(actor: ActorCtx, q: SummaryQuery) {
