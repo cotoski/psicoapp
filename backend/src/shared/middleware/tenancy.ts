@@ -28,6 +28,7 @@ export const PERMISSIONS = [
   'documents:download',
   'dashboard:read',
   'users:manage',
+  'tenant:update',
 ] as const
 
 export type Permission = (typeof PERMISSIONS)[number]

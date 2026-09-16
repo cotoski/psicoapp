@@ -8,6 +8,13 @@
       "when": 1789564271519,
       "tag": "0000_careful_la_nuit",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789600576640,
+      "tag": "0001_tenant_company",
+      "breakpoints": true
     }
   ]
 }

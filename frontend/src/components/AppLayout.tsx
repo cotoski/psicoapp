@@ -7,6 +7,7 @@ const NAV = [
   { to: '/agenda', label: 'Agenda' },
   { to: '/financeiro', label: 'Financeiro' },
   { to: '/tributos', label: 'Tributos' },
+  { to: '/empresa', label: 'Empresa' },
 ]
 
 export function AppLayout() {

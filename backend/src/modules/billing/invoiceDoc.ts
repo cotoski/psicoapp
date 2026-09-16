@@ -20,7 +20,16 @@ export interface NotaSession {
 }
 
 export interface NotaInput {
-  prestador: { nome: string; responsavel?: string | null; crp?: string | null }
+  prestador: {
+    nome: string
+    responsavel?: string | null
+    crp?: string | null
+    cnpj?: string | null
+    inscricaoMunicipal?: string | null
+    endereco?: string | null
+    email?: string | null
+    telefone?: string | null
+  }
   tomador: { nome: string; cpf: string | null; email: string | null; telefone: string | null }
   sessoes: NotaSession[]
   regime: Regime | null

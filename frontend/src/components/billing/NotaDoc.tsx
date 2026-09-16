@@ -1,7 +1,16 @@
 import { fmtDateTime, fmtMoney } from '../../utils/format'
 
 export interface NotaDoc {
-  prestador: { nome: string; responsavel: string | null; crp: string | null }
+  prestador: {
+    nome: string
+    responsavel: string | null
+    crp: string | null
+    cnpj?: string | null
+    inscricaoMunicipal?: string | null
+    endereco?: string | null
+    email?: string | null
+    telefone?: string | null
+  }
   tomador: {
     nome: string
     cpf: string | null
@@ -49,10 +58,22 @@ export function NotaDocCard({ nota }: { nota: NotaDoc }) {
         <div className="nota-box">
           <h4>Prestador</h4>
           <p>{nota.prestador.nome}</p>
+          {nota.prestador.cnpj && <p>CNPJ/CPF {nota.prestador.cnpj}</p>}
+          {nota.prestador.inscricaoMunicipal && (
+            <p>Insc. Municipal {nota.prestador.inscricaoMunicipal}</p>
+          )}
+          {nota.prestador.endereco && <p>{nota.prestador.endereco}</p>}
           {nota.prestador.responsavel && (
             <p>
               {nota.prestador.responsavel}
               {nota.prestador.crp ? ` · CRP ${nota.prestador.crp}` : ''}
+            </p>
+          )}
+          {(nota.prestador.email || nota.prestador.telefone) && (
+            <p>
+              {[nota.prestador.email, nota.prestador.telefone]
+                .filter(Boolean)
+                .join(' · ')}
             </p>
           )}
         </div>

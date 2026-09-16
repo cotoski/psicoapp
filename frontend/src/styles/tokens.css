@@ -135,6 +135,9 @@ html, body {
 .loading-state { font-size: 13px; color: var(--text-secondary); padding: 1rem 0; }
 .empty-state { font-size: 13px; color: var(--text-muted); padding: 1rem 0; }
 .alert-error { background: var(--bg-danger); color: var(--text-danger); border-radius: var(--radius); padding: 10px 12px; font-size: 13px; margin-bottom: 1rem; }
+.alert-success { background: var(--bg-success); color: var(--text-success); border-radius: var(--radius); padding: 10px 12px; font-size: 13px; margin-bottom: 1rem; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0 1.5rem; }
+.form-grid .form-group { margin-bottom: 1rem; }
 
 /* Nota de serviços (prévia estilo NFS-e) */
 .nota-doc { border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; margin-top: 12px; background: var(--surface); }

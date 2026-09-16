@@ -103,10 +103,10 @@ export class BillingRepo {
       .orderBy(patients.nome, appointments.startsAt)
   }
 
-  // Dados do prestador para a nota: nome do consultório + responsável (CRP).
+  // Dados do prestador para a nota: empresa do consultório + responsável (CRP).
   async prestadorInfo(tenantId: string, userId: string) {
     const [t] = await this.db
-      .select({ nome: tenants.name })
+      .select()
       .from(tenants)
       .where(eq(tenants.id, tenantId))
       .limit(1)
@@ -115,7 +115,27 @@ export class BillingRepo {
       .from(users)
       .where(eq(users.id, userId))
       .limit(1)
-    return { nome: t?.nome ?? '', responsavel: u?.nome ?? null, crp: u?.crp ?? null }
+    const endereco = t
+      ? [
+          [t.logradouro, t.numero].filter(Boolean).join(', '),
+          t.complemento,
+          t.bairro,
+          [t.cidade, t.uf].filter(Boolean).join('/'),
+          t.cep ? `CEP ${t.cep}` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ') || null
+      : null
+    return {
+      nome: t?.name ?? '',
+      responsavel: u?.nome ?? null,
+      crp: u?.crp ?? null,
+      cnpj: t?.cnpj ?? null,
+      inscricaoMunicipal: t?.inscricaoMunicipal ?? null,
+      endereco,
+      email: t?.emailContato ?? null,
+      telefone: t?.telefone ?? null,
+    }
   }
 
   async taxConfig(tenantId: string) {

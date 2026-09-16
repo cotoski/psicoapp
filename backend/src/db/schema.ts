@@ -52,6 +52,18 @@ export const recurrenceFreq = pgEnum('recurrence_freq', [
 export const tenants = pgTable('tenants', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
+  // Dados da empresa (prestador) — usados na nota de serviços
+  cnpj: varchar('cnpj', { length: 18 }),
+  inscricaoMunicipal: varchar('inscricao_municipal', { length: 30 }),
+  logradouro: text('logradouro'),
+  numero: varchar('numero', { length: 20 }),
+  complemento: text('complemento'),
+  bairro: text('bairro'),
+  cep: varchar('cep', { length: 9 }),
+  cidade: text('cidade'),
+  uf: varchar('uf', { length: 2 }),
+  telefone: varchar('telefone', { length: 50 }),
+  emailContato: varchar('email_contato', { length: 255 }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
 

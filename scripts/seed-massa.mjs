@@ -53,6 +53,25 @@ await req('/tax/config', {
 })
 console.log('✓ tax_config: simples / sp')
 
+// Empresa (prestador) — preenche a nota de serviços
+await req('/tenants/me', {
+  method: 'PUT',
+  body: {
+    name: 'Psicologia e Mindfulness Atendimento Terapêutico',
+    cnpj: '39.285.058/0001-64',
+    inscricaoMunicipal: '1234567',
+    logradouro: 'Rua Exemplo',
+    numero: '123',
+    bairro: 'Centro',
+    cidade: 'Presidente Prudente',
+    uf: 'SP',
+    cep: '19010-010',
+    telefone: '18 3222-0000',
+    emailContato: 'contato@clinica.exemplo.br',
+  },
+})
+console.log('✓ empresa (prestador) configurada')
+
 const pacientes = [
   {
     nome: 'Ana Beatriz Souza', cpf: '123.456.789-09', telefone: '11987654001',
