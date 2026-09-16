@@ -5,18 +5,21 @@ dotenv.config({ path: ['.env', '../.env'] })
 import { loadConfig } from './config.js'
 import { buildLogger } from './shared/logger.js'
 import { createApp } from './app.js'
-import { createPool } from './db/client.js'
+import { sql } from 'drizzle-orm'
+import { createDb } from './db/client.js'
 
 async function main() {
   const config = loadConfig()
   const logger = buildLogger(config)
-  const pool = createPool(config.DATABASE_URL)
+  const db = createDb(config.DATABASE_URL)
+  const pool = db.$client
 
   const app = createApp({
     config,
     logger,
+    db,
     readinessChecks: [
-      { name: 'database', check: async () => void (await pool.query('SELECT 1')) },
+      { name: 'database', check: async () => void (await db.execute(sql`SELECT 1`)) },
     ],
   })
 

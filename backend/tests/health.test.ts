@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import request from 'supertest'
 import { createApp } from '../src/app.js'
-import { testConfig, testLogger } from './helpers.js'
+import { testConfig, testDb, testLogger } from './helpers.js'
 
-const app = createApp({ config: testConfig(), logger: testLogger() })
+const app = createApp({ config: testConfig(), logger: testLogger(), db: testDb() })
 
 describe('health checks', () => {
   it('GET /health/live retorna 200', async () => {
@@ -22,6 +22,7 @@ describe('health checks', () => {
     const failing = createApp({
       config: testConfig(),
       logger: testLogger(),
+      db: testDb(),
       readinessChecks: [
         {
           name: 'database',

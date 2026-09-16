@@ -1,5 +1,7 @@
 import { loadConfig, type Config } from '../src/config.js'
 import { buildLogger } from '../src/shared/logger.js'
+import { createDb, type Db } from '../src/db/client.js'
+import { testDbUrl } from './globalSetup.js'
 
 export function testConfig(overrides: NodeJS.ProcessEnv = {}): Config {
   return loadConfig({
@@ -14,4 +16,15 @@ export function testConfig(overrides: NodeJS.ProcessEnv = {}): Config {
 
 export function testLogger() {
   return buildLogger(testConfig())
+}
+
+// Pool lazy: criar sem servidor de banco não conecta (seguro em testes sem DB)
+export function testDb(): Db {
+  return createDb(testDbUrl())
+}
+
+export async function truncateAll(db: Db) {
+  await db.execute(
+    'TRUNCATE audit_events, session_records, appointments, patients, tax_config, refresh_tokens, users, tenants CASCADE',
+  )
 }
