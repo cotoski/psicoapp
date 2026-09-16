@@ -1,5 +1,6 @@
 import type { Db, DbLike } from '../../db/client.js'
 import { AppError } from '../../shared/errors.js'
+import { parseLocalDateTime } from '../../shared/time.js'
 import { recordAudit } from '../audit/service.js'
 import type { PatientRow } from '../patients/repo.js'
 import { AppointmentsRepo, type AppointmentRow } from './repo.js'
@@ -16,6 +17,15 @@ interface ActorCtx {
   userId: string
   ip?: string
   requestId?: string
+}
+
+// Postgres 23505 — UNIQUE(patient_id, starts_at): já existe sessão no horário.
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as { cause?: { code?: string } }).cause?.code === '23505'
+  )
 }
 
 // Máquina de status (spec B7). completed/cancelled/no_show são terminais.
@@ -73,15 +83,27 @@ export class AppointmentsService {
     const patient = await this.repo.findPatient(actor.tenantId, input.patientId)
     if (!patient)
       throw new AppError(404, 'PATIENT_NOT_FOUND', 'Paciente não encontrado')
-    const row = await this.repo.create({
-      tenantId: actor.tenantId,
-      patientId: input.patientId,
-      startsAt: new Date(input.startsAt),
-      duracao: input.duracao,
-      status: input.status,
-      valor: String(input.valor ?? patient.valor),
-      pagoEm: input.pagoEm ? new Date(input.pagoEm) : null,
-    })
+    let row
+    try {
+      row = await this.repo.create({
+        tenantId: actor.tenantId,
+        patientId: input.patientId,
+        startsAt: parseLocalDateTime(input.startsAt),
+        duracao: input.duracao,
+        status: input.status,
+        valor: String(input.valor ?? patient.valor),
+        pagoEm: input.pagoEm ? parseLocalDateTime(input.pagoEm) : null,
+      })
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        throw new AppError(
+          409,
+          'APPOINTMENT_CONFLICT',
+          'Já existe sessão do paciente nesse horário',
+        )
+      }
+      throw err
+    }
     await recordAudit(this.db, {
       tenantId: actor.tenantId,
       actorUserId: actor.userId,
@@ -112,12 +134,12 @@ export class AppointmentsService {
     }
 
     const values: Partial<typeof existing> = {}
-    if (input.startsAt !== undefined) values.startsAt = new Date(input.startsAt)
+    if (input.startsAt !== undefined) values.startsAt = parseLocalDateTime(input.startsAt)
     if (input.duracao !== undefined) values.duracao = input.duracao
     if (input.status !== undefined) values.status = input.status
     if (input.valor !== undefined) values.valor = String(input.valor)
     if (input.pagoEm !== undefined)
-      values.pagoEm = input.pagoEm === null ? null : new Date(input.pagoEm)
+      values.pagoEm = input.pagoEm === null ? null : parseLocalDateTime(input.pagoEm)
 
     const row = await this.repo.update(actor.tenantId, id, values)
     await recordAudit(this.db, {

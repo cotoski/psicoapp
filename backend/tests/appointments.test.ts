@@ -19,6 +19,16 @@ let db: Db | undefined
 
 const DIAS = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado']
 
+// startsAt serializado é UTC; asserta a hora de parede em São Paulo.
+function spTime(iso: string): string {
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date(iso))
+}
+
 const schedulePatient = {
   nome: 'Paciente Agenda',
   valor: 150,
@@ -51,8 +61,7 @@ describe('recurrence (unitário — spec B1)', () => {
     const target = DIAS.indexOf(dow)
     for (let i = 0; i < occ.length; i++) {
       expect(occ[i].getDay()).toBe(target)
-      expect(occ[i].getHours()).toBe(10)
-      expect(occ[i].getMinutes()).toBe(30)
+      expect(spTime(occ[i].toISOString())).toBe('10:30')
       if (i > 0) {
         expect((occ[i].getTime() - occ[i - 1].getTime()) / 86400000).toBe(7)
       }
@@ -215,10 +224,10 @@ describe.skipIf(!hasDb)('appointments (integração)', () => {
 
     // completado preservado com horário antigo
     expect(byId.get(completed.id)).toBeTruthy()
-    expect(byId.get(completed.id)!.startsAt.slice(11, 16)).toBe('09:00')
+    expect(spTime(byId.get(completed.id)!.startsAt)).toBe('09:00')
     // com prontuário preservado
     expect(byId.get(withRecord.id)).toBeTruthy()
-    expect(byId.get(withRecord.id)!.startsAt.slice(11, 16)).toBe('09:00')
+    expect(spTime(byId.get(withRecord.id)!.startsAt)).toBe('09:00')
     // os demais scheduled futuros passaram a 15:00
     // (exceto os preservados: completado e com prontuário, que eram scheduled)
     const preserved = new Set([completed.id, withRecord.id])
@@ -228,7 +237,7 @@ describe.skipIf(!hasDb)('appointments (integração)', () => {
     )
     expect(scheduled.length).toBeGreaterThan(0)
     for (const s of scheduled) {
-      expect(s.startsAt.slice(11, 16)).toBe('15:00')
+      expect(spTime(s.startsAt)).toBe('15:00')
     }
     expect(after.body.total).toBeGreaterThanOrEqual(totalBefore)
   })

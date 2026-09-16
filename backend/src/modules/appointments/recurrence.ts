@@ -1,5 +1,6 @@
 // Port fiel de gerarSessoesRecorrentes (behavior-spec B1).
-// Datas tratadas como locais, como no legado. Fuso fixo fica para decisão de produto.
+// Datas civis iteradas sem fuso; o instante final é São Paulo (ver shared/time).
+import { localDateTimeToDate, todayInBrazil } from '../../shared/time.js'
 const DIAS: Record<string, number> = {
   domingo: 0,
   segunda: 1,
@@ -20,7 +21,7 @@ export function toISODate(d: Date): string {
 }
 
 export function todayISO(): string {
-  return toISODate(new Date())
+  return todayInBrazil()
 }
 
 export function addMonths(iso: string, months: number): string {
@@ -60,7 +61,7 @@ export function generateOccurrences(o: OccurrenceOpts): Date[] {
     }
 
     while (toISODate(d) <= o.fim) {
-      out.push(new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m, 0))
+      out.push(localDateTimeToDate(toISODate(d), `${h}:${m}`))
       if (o.frequencia === 'mensal') {
         // primeira ocorrência do mesmo dia-da-semana no mês seguinte
         d = new Date(d.getFullYear(), d.getMonth() + 1, 1)
