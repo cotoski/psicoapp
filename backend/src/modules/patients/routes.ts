@@ -91,6 +91,14 @@ export function patientsRouter({ db, config }: { db: Db; config: Config }): Rout
     },
   )
 
+  router.post(
+    '/:id/renovar',
+    requirePermission(db, 'patients:update'),
+    async (req, res) => {
+      res.json(await service.renovar(actor(req), paramId(req.params.id)))
+    },
+  )
+
   router.delete(
     '/:id',
     requirePermission(db, 'patients:archive'),

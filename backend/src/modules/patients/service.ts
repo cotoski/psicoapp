@@ -5,6 +5,8 @@ import { encryptField, decryptField } from '../../shared/crypto/fieldEncrypt.js'
 import { recordAudit } from '../audit/service.js'
 import { permissionsForRole, type Role } from '../../shared/middleware/tenancy.js'
 import { PatientsRepo, type PatientRow } from './repo.js'
+import { AppointmentsService } from '../appointments/service.js'
+import { addMonths as addMonthsRec, todayISO as todayRecISO } from '../appointments/recurrence.js'
 import type {
   CreatePatientInput,
   ListPatientsQuery,
@@ -19,16 +21,6 @@ interface ActorCtx {
   requestId?: string
 }
 
-function addMonths(iso: string, months: number): string {
-  const d = new Date(`${iso}T00:00:00Z`)
-  d.setUTCMonth(d.getUTCMonth() + months)
-  return d.toISOString().slice(0, 10)
-}
-
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
 // Legacy (behavior-spec): qtd_sessoes_nota deriva de frequência × dias.
 function deriveQtdSessoesNota(input: CreatePatientInput): number {
   if (input.qtdSessoesNota) return input.qtdSessoesNota
@@ -41,12 +33,14 @@ function deriveQtdSessoesNota(input: CreatePatientInput): number {
 
 export class PatientsService {
   private repo: PatientsRepo
+  private appointments: AppointmentsService
 
   constructor(
     private db: Db,
     private config: Config,
   ) {
     this.repo = new PatientsRepo(db)
+    this.appointments = new AppointmentsService(db)
   }
 
   // Anamnese é conteúdo clínico: só sai para quem tem records:read.
@@ -96,7 +90,7 @@ export class PatientsService {
 
   async create(actor: ActorCtx, input: CreatePatientInput) {
     const dataReajuste =
-      input.dataReajuste ?? addMonths(todayISO(), input.mesesCiclo)
+      input.dataReajuste ?? addMonthsRec(todayRecISO(), input.mesesCiclo)
     const row = await this.repo.create(actor.tenantId, {
       nome: input.nome,
       cpf: input.cpf ?? null,
@@ -116,6 +110,16 @@ export class PatientsService {
       mesesCiclo: input.mesesCiclo,
       salaReuniao: input.salaReuniao ?? null,
     })
+    // Spec B1: com agenda completa, gera o ciclo até data_reajuste (idempotente)
+    if (row.diasSemana?.length && row.horario && row.dataReajuste) {
+      await this.appointments.generateForPatient(
+        this.db,
+        actor.tenantId,
+        row,
+        todayRecISO(),
+        row.dataReajuste,
+      )
+    }
     await recordAudit(this.db, {
       tenantId: actor.tenantId,
       actorUserId: actor.userId,
@@ -156,8 +160,30 @@ export class PatientsService {
       values.dataReajuste = input.dataReajuste
     if (input.mesesCiclo !== undefined) values.mesesCiclo = input.mesesCiclo
     if (input.salaReuniao !== undefined) values.salaReuniao = input.salaReuniao
+    if (input.qtdSessoesNota === undefined &&
+      (input.diasSemana !== undefined || input.frequenciaRecorrencia !== undefined)
+    ) {
+      values.qtdSessoesNota = deriveQtdSessoesNota({
+        ...input,
+        diasSemana: input.diasSemana ?? existing.diasSemana ?? undefined,
+        frequenciaRecorrencia:
+          input.frequenciaRecorrencia ?? existing.frequenciaRecorrencia,
+      } as CreatePatientInput)
+    }
 
     const row = await this.repo.update(actor.tenantId, id, values)
+
+    // Spec B1.1: agenda alterada → regenera futuros (transação; preserva
+    // completados, faturados e os que já têm prontuário).
+    const scheduleChanged =
+      input.diasSemana !== undefined ||
+      input.horario !== undefined ||
+      input.frequenciaRecorrencia !== undefined ||
+      input.dataReajuste !== undefined
+    if (scheduleChanged && row) {
+      await this.appointments.regenerateForPatient(actor.tenantId, row)
+    }
+
     await recordAudit(this.db, {
       tenantId: actor.tenantId,
       actorUserId: actor.userId,
@@ -206,5 +232,30 @@ export class PatientsService {
       ip: actor.ip,
       requestId: actor.requestId,
     })
+  }
+
+  // Spec B2: renova ciclo — data_reajuste += meses_ciclo, gera [anterior, nova]
+  async renovar(actor: ActorCtx, id: string) {
+    const existing = await this.repo.findById(actor.tenantId, id)
+    if (!existing)
+      throw new AppError(404, 'PATIENT_NOT_FOUND', 'Paciente não encontrado')
+    const { nova, gerados } = await this.appointments.renewCycle(
+      actor.tenantId,
+      existing,
+    )
+    const row = await this.repo.update(actor.tenantId, id, {
+      dataReajuste: nova,
+    })
+    await recordAudit(this.db, {
+      tenantId: actor.tenantId,
+      actorUserId: actor.userId,
+      action: 'PATIENT_RENEWED',
+      resourceType: 'patient',
+      resourceId: id,
+      result: 'success',
+      ip: actor.ip,
+      requestId: actor.requestId,
+    })
+    return { ...this.serialize(row!, actor.role), agendamentosGerados: gerados }
   }
 }

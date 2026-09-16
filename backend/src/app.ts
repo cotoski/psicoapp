@@ -12,6 +12,7 @@ import { healthRouter, type ReadinessCheck } from './modules/health/routes.js'
 import { identityRouter } from './modules/identity/routes.js'
 import { tenantsRouter } from './modules/tenants/routes.js'
 import { patientsRouter } from './modules/patients/routes.js'
+import { appointmentsRouter } from './modules/appointments/routes.js'
 import { requireAuth } from './shared/middleware/auth.js'
 import { tenantContext } from './shared/middleware/tenancy.js'
 
@@ -53,6 +54,7 @@ export function createApp({ config, logger, db, readinessChecks = [] }: AppDeps)
   api.use(requireAuth(config), tenantContext(db))
   api.use('/tenants', tenantsRouter({ db }))
   api.use('/patients', patientsRouter({ db, config }))
+  api.use('/appointments', appointmentsRouter({ db }))
   app.use('/api/v1', api)
 
   app.use(notFound)

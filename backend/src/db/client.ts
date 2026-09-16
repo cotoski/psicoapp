@@ -11,4 +11,6 @@ export function createDb(connectionString: string) {
 }
 
 export type Db = ReturnType<typeof createDb>
+// Subconjunto estrutural que Db e transações (tx) compartilham — repos aceitam ambos.
+export type DbLike = Pick<Db, 'select' | 'insert' | 'update' | 'delete' | 'execute'>
 export { schema }
