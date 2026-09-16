@@ -241,7 +241,7 @@ export function FinancePage() {
             Documento interno (prévia no estilo NFS-e) — a emissão fiscal real
             exige integração com a prefeitura.
           </p>
-          {invoice.notas.map((n, i) => (
+          {(invoice.notas ?? []).map((n, i) => (
             <div className="nota-doc" key={i}>
               <div className="nota-header">
                 <strong>NOTA DE SERVIÇOS — PRÉVIA</strong>
