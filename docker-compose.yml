@@ -1,44 +1,28 @@
-version: '3.8'
-
 services:
   db:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     environment:
-      POSTGRES_USER: psico
-      POSTGRES_PASSWORD: psico123
-      POSTGRES_DB: psicoapp
+      POSTGRES_USER: ${POSTGRES_USER:-psicoapp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:-psicoapp}
       TZ: America/Sao_Paulo
     volumes:
       - db_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
-  backend:
-    build: ./backend
+  mailpit:
+    image: axllent/mailpit:latest
     ports:
-      - "3001:3001"
+      - "127.0.0.1:1025:1025"   # SMTP
+      - "127.0.0.1:8025:8025"   # Web UI
     environment:
-      DATABASE_URL: postgres://psico:psico123@db:5432/psicoapp
-      JWT_SECRET: prototype-secret
       TZ: America/Sao_Paulo
-    depends_on:
-      - db
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
-
-  frontend:
-    build: ./frontend
-    ports:
-      - "3000:3000"
-    environment:
-      VITE_API_URL: /api
-    depends_on:
-      - backend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
 
 volumes:
   db_data:

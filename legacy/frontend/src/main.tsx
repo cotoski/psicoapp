@@ -10,6 +10,7 @@ type Session = {
   valor: number
   pago_em: string | null
   notas: string
+  faturada?: boolean
   sala_reuniao?: string
 }
 
@@ -52,6 +53,8 @@ let dashboard: Dashboard | null = null
 let editingPatientId: number | null = null
 let detailPatientId: number | null = null
 let notasPendentes: any[] = []
+let activeNotasTab = 'geral'
+let detalhadoPatientFilter: number | '' = ''
 let agendaYear = new Date().getFullYear()
 let agendaMonth = new Date().getMonth()
 let agendaSelected: string | null = new Date().toISOString().slice(0, 10)
@@ -621,6 +624,205 @@ function setupFinanceiro() {
   setCurrentMonth()
 }
 
+const TAX_ISS_RATES: Record<string, number> = { sp: 0.02, rj: 0.03, mg: 0.025, ba: 0.05 }
+
+function calcularImpostos(valor: number, municipio: string) {
+  const iss = TAX_ISS_RATES[municipio] || 0.02
+  return {
+    pf: { iss: valor * iss, irpf: valor * 0.15, inss: valor * 0.10, total: valor * (iss + 0.15 + 0.10) },
+    simples: { iss: valor * iss, das: valor * 0.07, total: valor * (iss + 0.07) },
+    presumido: { iss: valor * iss, irpj: valor * 0.072, piscofins: valor * 0.0965, inss: valor * 0.15, total: valor * (iss + 0.072 + 0.0965 + 0.15) },
+  }
+}
+
+function renderTax() {
+  const valorInput = document.getElementById('tax-valor') as HTMLInputElement | null
+  const municipioInput = document.getElementById('tax-municipio') as HTMLSelectElement | null
+  const valor = parseFloat(valorInput?.value || '0') || 0
+  const municipio = municipioInput?.value || 'sp'
+  const active = document.querySelector('.tax-regime.active') as HTMLElement | null
+  const regime = (active?.dataset.regime as 'pf' | 'simples' | 'presumido') || 'pf'
+  const impostos = calcularImpostos(valor, municipio)
+  const resultado = impostos[regime]
+  const liquido = valor - resultado.total
+  const taxa = valor > 0 ? ((resultado.total / valor) * 100).toFixed(1) : '0.0'
+
+  const result = document.getElementById('tax-result')
+  if (result) {
+    result.innerHTML = `
+      <div class="metric-card" style="margin-bottom: 0.5rem;">
+        <div class="metric-label">Valor bruto</div>
+        <div class="metric-value">${fmtMoney(valor)}</div>
+      </div>
+      <div class="metric-card" style="margin-bottom: 0.5rem;">
+        <div class="metric-label">Total impostos (${taxa}%)</div>
+        <div class="metric-value" style="color: var(--text-danger);">- ${fmtMoney(resultado.total)}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Valor líquido</div>
+        <div class="metric-value" style="color: var(--text-success);">${fmtMoney(liquido)}</div>
+      </div>
+    `
+  }
+
+  const breakdown = document.getElementById('tax-breakdown')
+  if (breakdown) {
+    let html = ''
+    if (regime === 'pf') {
+      html = `
+        <div class="metric-card"><div class="metric-label">ISS</div><div class="metric-value">- ${fmtMoney(resultado.iss)}</div></div>
+        <div class="metric-card"><div class="metric-label">Carnê-Leão</div><div class="metric-value">- ${fmtMoney(resultado.irpf)}</div></div>
+        <div class="metric-card"><div class="metric-label">INSS</div><div class="metric-value">- ${fmtMoney(resultado.inss)}</div></div>
+      `
+    } else if (regime === 'simples') {
+      html = `
+        <div class="metric-card"><div class="metric-label">DAS Simples</div><div class="metric-value">- ${fmtMoney(resultado.das)}</div></div>
+        <div class="metric-card"><div class="metric-label">ISS</div><div class="metric-value">- ${fmtMoney(resultado.iss)}</div></div>
+      `
+    } else {
+      html = `
+        <div class="metric-card"><div class="metric-label">ISS</div><div class="metric-value">- ${fmtMoney(resultado.iss)}</div></div>
+        <div class="metric-card"><div class="metric-label">IRPJ + CSLL</div><div class="metric-value">- ${fmtMoney(resultado.irpj)}</div></div>
+        <div class="metric-card"><div class="metric-label">PIS + COFINS</div><div class="metric-value">- ${fmtMoney(resultado.piscofins)}</div></div>
+      `
+    }
+    breakdown.innerHTML = html
+  }
+
+  const update = (id: string, r: { total: number }) => {
+    const tax = valor > 0 ? ((r.total / valor) * 100).toFixed(1) : '0.0'
+    const el = document.getElementById(id)
+    if (el) el.textContent = tax + '%'
+    const liquidoEl = document.getElementById(id.replace('-tax', '-liquido'))
+    if (liquidoEl) liquidoEl.textContent = fmtMoney(valor - r.total)
+  }
+
+  update('tax-pf-tax', impostos.pf)
+  update('tax-simples-tax', impostos.simples)
+  update('tax-presumido-tax', impostos.presumido)
+}
+
+function setupTaxCalculator() {
+  document.querySelectorAll('.tax-regime').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tax-regime').forEach(b => {
+        b.classList.remove('active')
+        ;(b as HTMLElement).style.background = ''
+        ;(b as HTMLElement).style.color = ''
+        ;(b as HTMLElement).style.borderColor = ''
+      })
+      btn.classList.add('active')
+      const el = btn as HTMLElement
+      el.style.background = 'var(--bg-accent)'
+      el.style.color = 'var(--text-accent)'
+      el.style.borderColor = 'var(--border-accent)'
+      renderTax()
+    })
+  })
+
+  const valor = document.getElementById('tax-valor')
+  const municipio = document.getElementById('tax-municipio')
+  valor?.addEventListener('input', renderTax)
+  municipio?.addEventListener('change', renderTax)
+
+  renderTax()
+}
+
+const LIMIAR_FATOR_R = 0.28
+const ALIQUOTA_ANEXO_III_FAIXA1 = 0.06
+const ALIQUOTA_ANEXO_V_FAIXA1 = 0.155
+
+type FatorRInput = { faturamentoAnual: number; folhaPagamentoAnual: number }
+type FatorRResult = { fatorR: number; anexo: 'III' | 'V'; aliquotaEfetivaEstimada: number; atingiuLimiar: boolean }
+type SimulacaoAjuste = { prolaboreAnualNecessario: number; prolaboreAdicionalNecessario: number; economiaAnualEstimada: number }
+
+function calcularFatorR(input: FatorRInput): FatorRResult {
+  if (input.faturamentoAnual <= 0) {
+    throw new Error('Faturamento anual deve ser maior que zero')
+  }
+  const fatorR = input.folhaPagamentoAnual / input.faturamentoAnual
+  const atingiuLimiar = fatorR >= LIMIAR_FATOR_R
+  const anexo = atingiuLimiar ? 'III' : 'V'
+  const aliquotaEfetivaEstimada = atingiuLimiar ? ALIQUOTA_ANEXO_III_FAIXA1 : ALIQUOTA_ANEXO_V_FAIXA1
+  return { fatorR, anexo, aliquotaEfetivaEstimada, atingiuLimiar }
+}
+
+function simularAjusteParaAnexoIII(faturamentoAnual: number, folhaPagamentoAtual: number): SimulacaoAjuste {
+  const prolaboreAnualNecessario = Math.ceil(faturamentoAnual * LIMIAR_FATOR_R)
+  const prolaboreAdicionalNecessario = Math.max(0, prolaboreAnualNecessario - folhaPagamentoAtual)
+  const impostoAnexoV = faturamentoAnual * ALIQUOTA_ANEXO_V_FAIXA1
+  const impostoAnexoIII = faturamentoAnual * ALIQUOTA_ANEXO_III_FAIXA1
+  const economiaAnualEstimada = Math.max(0, impostoAnexoV - impostoAnexoIII)
+  return { prolaboreAnualNecessario, prolaboreAdicionalNecessario, economiaAnualEstimada }
+}
+
+function renderFatorR() {
+  const faturamentoInput = document.getElementById('faturamento-anual') as HTMLInputElement | null
+  const folhaInput = document.getElementById('folha-anual') as HTMLInputElement | null
+  const faturamento = parseFloat(faturamentoInput?.value || '0') || 0
+  const folha = parseFloat(folhaInput?.value || '0') || 0
+
+  const result = document.getElementById('fator-r-result')
+  const simulacao = document.getElementById('fator-r-simulacao')
+  if (!result) return
+
+  if (faturamento <= 0) {
+    result.innerHTML = '<div class="metric-card" style="background: var(--bg-warning);"><div class="metric-value" style="color: var(--text-warning); font-size: 14px;">Informe o faturamento anual.</div></div>'
+    if (simulacao) simulacao.innerHTML = ''
+    return
+  }
+
+  let res: FatorRResult
+  try {
+    res = calcularFatorR({ faturamentoAnual: faturamento, folhaPagamentoAnual: folha })
+  } catch (e: any) {
+    result.innerHTML = `<div class="metric-card" style="background: var(--bg-warning);"><div class="metric-value" style="color: var(--text-warning); font-size: 14px;">${e.message}</div></div>`
+    if (simulacao) simulacao.innerHTML = ''
+    return
+  }
+
+  const pct = (res.fatorR * 100).toFixed(1)
+  const proximo = res.fatorR >= 0.25 && res.fatorR < LIMIAR_FATOR_R
+  const status = res.atingiuLimiar ? 'success' : 'warning'
+  const icon = res.atingiuLimiar ? '✅' : '⚠️'
+  const msg = res.atingiuLimiar
+    ? 'Fator R atingiu o limiar de 28%'
+    : (proximo ? 'Muito perto do limiar — pequeno ajuste resolve' : 'Abaixo do limiar de 28%')
+
+  result.innerHTML = `
+    <div class="metric-card" style="background: var(--bg-${status});">
+      <div class="metric-label">${icon} Fator R</div>
+      <div class="metric-value" style="color: var(--text-${status});">${pct}%</div>
+      <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Anexo ${res.anexo} — alíquota estimada ~${(res.aliquotaEfetivaEstimada * 100).toFixed(1)}%</div>
+      <div style="font-size: 12px; color: var(--text-${status}); margin-top: 4px;">${msg}</div>
+    </div>
+  `
+
+  if (simulacao) {
+    if (res.atingiuLimiar) {
+      simulacao.innerHTML = ''
+    } else {
+      const ajuste = simularAjusteParaAnexoIII(faturamento, folha)
+      simulacao.innerHTML = `
+        <div class="info-box" style="font-size: 13px; background: var(--bg-accent); border-left: 4px solid var(--fill-accent); padding: 12px; border-radius: var(--radius);">
+          <strong>💡 Para cair no Anexo III (mais barato):</strong><br>
+          Aumente folha/pró-labore anual para <strong>${fmtMoney(ajuste.prolaboreAnualNecessario)}</strong><br>
+          (adicional de <strong>${fmtMoney(ajuste.prolaboreAdicionalNecessario)}</strong>/ano, ou ~${fmtMoney(ajuste.prolaboreAdicionalNecessario / 12)}/mês)<br>
+          Economia estimada: <strong>${fmtMoney(ajuste.economiaAnualEstimada)}/ano</strong>
+        </div>
+      `
+    }
+  }
+}
+
+function setupFatorR() {
+  const faturamento = document.getElementById('faturamento-anual')
+  const folha = document.getElementById('folha-anual')
+  faturamento?.addEventListener('input', renderFatorR)
+  folha?.addEventListener('input', renderFatorR)
+  renderFatorR()
+}
+
 function navigateTo(page: string) {
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'))
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
@@ -628,7 +830,17 @@ function navigateTo(page: string) {
   nav?.classList.add('active')
   const p = document.getElementById(page)
   p?.classList.add('active')
+
+  const isLogin = page === 'login'
+  const sidebar = document.querySelector('.sidebar') as HTMLElement | null
+  const header = document.querySelector('.header') as HTMLElement | null
+  const content = document.querySelector('.content') as HTMLElement | null
+  if (sidebar) sidebar.style.display = isLogin ? 'none' : ''
+  if (header) header.style.display = isLogin ? 'none' : ''
+  if (content) content.style.padding = isLogin ? '0' : ''
+
   const pageTitle: Record<string, string> = {
+    login: 'Login',
     dashboard: 'Dashboard',
     agenda: 'Meu calendário',
     sessao: 'Registrar nova sessão',
@@ -1147,44 +1359,174 @@ function renderAll() {
 }
 
 function renderNotas() {
-  const container = document.getElementById('notas-list')
+  document.querySelectorAll('.notas-section').forEach(s => s.classList.remove('active'))
+  document.getElementById(`notas-${activeNotasTab}`)?.classList.add('active')
+
+  if (activeNotasTab === 'geral') renderNotasGeral()
+  else if (activeNotasTab === 'detalhado') renderNotasDetalhado()
+  else renderNotasGeradas()
+}
+
+function renderNotasGeral() {
+  const container = document.getElementById('notas-geral')
   if (!container) return
   api<any[]>('/notas/pendentes')
     .then(data => {
       notasPendentes = data
       if (data.length === 0) {
-        container.innerHTML = '<div class=\'empty-state\'>Nenhuma sessão pendente de faturamento.</div>'
+        container.innerHTML = `<div class='empty-state'>Nenhum paciente com sessões pendentes de faturamento.</div>`
         return
       }
-      container.innerHTML = data.map(p => {
-        const qtd = p.qtd_sessoes_nota || 1
-        const tipo = p.tipo_faturamento === 'pacote' ? `Pacote (${qtd} sessões)` : 'Imediato (1 sessão)'
-        const faltam = p.pronto ? 0 : qtd - (p.pendente || 0)
-        const acao = p.pronto
-          ? `<button class='btn gerar-nota' data-id='${p.id}' style='background: var(--fill-accent); color: var(--on-accent); border: 0;'>Gerar nota</button>`
-          : `<span style='font-size: 12px; color: var(--text-secondary);'>Faltam ${faltam} sessão(ões)</span>`
-        return `
-          <div class='card' style='margin-bottom: 0.75rem;'>
-            <div style='display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;'>
-              <div>
-                <div style='font-weight: 500; font-size: 15px;'>${p.nome}</div>
-                <div style='font-size: 12px; color: var(--text-secondary); margin-top: 2px;'>${tipo} · Pendentes: ${p.pendente || 0} · Total: ${fmtMoney(p.valor_total || 0)}</div>
+      const totalPacientes = data.length
+      const totalSessoes = data.reduce((sum: number, p: any) => sum + (p.sessoes?.length || 0), 0)
+      const totalValor = data.reduce((sum: number, p: any) => sum + (p.valor_total || 0), 0)
+
+      const html = `
+        <div class='metrics-grid' style='margin-bottom: 1rem;'>
+          <div class='metric-card'><div class='metric-label'>Pacientes pendentes</div><div class='metric-value'>${totalPacientes}</div></div>
+          <div class='metric-card'><div class='metric-label'>Sessões pendentes</div><div class='metric-value'>${totalSessoes}</div></div>
+          <div class='metric-card'><div class='metric-label'>Total pendente</div><div class='metric-value'>${fmtMoney(totalValor)}</div></div>
+        </div>
+        ${data.map((p: any) => {
+          const qtd = p.qtd_sessoes_nota || 1
+          const tipo = p.tipo_faturamento === 'pacote' ? `Pacote (${qtd} sessões)` : 'Imediato (1 sessão)'
+          const pendenteCount = p.sessoes?.length || 0
+          return `
+            <div class='card' style='margin-bottom: 0.75rem;'>
+              <div style='display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;'>
+                <div>
+                  <div style='font-weight: 500; font-size: 15px;'>${p.nome}</div>
+                  <div style='font-size: 12px; color: var(--text-secondary);'>${tipo} · ${pendenteCount} sessão(ões) pendente(s) · Total: ${fmtMoney(p.valor_total || 0)}</div>
+                </div>
+                <button class='btn btn-small ver-detalhes' data-patient-id='${p.id}' style='background: var(--bg-accent); color: var(--text-accent); border-color: var(--border-accent);'>Ver detalhes</button>
               </div>
-              <div>${acao}</div>
             </div>
-          </div>
-        `
-      }).join('')
+          `
+        }).join('')}
+      `
+      container.innerHTML = html
     })
     .catch(e => {
       container.innerHTML = `<div class='empty-state'>Erro ao carregar notas: ${e.message}</div>`
     })
 }
 
+function renderNotasDetalhado() {
+  const container = document.getElementById('notas-detalhado')
+  if (!container) return
+  api<any[]>('/notas/pendentes')
+    .then(data => {
+      notasPendentes = data
+      if (data.length === 0) {
+        container.innerHTML = `<div class='empty-state'>Nenhuma sessão pendente de faturamento.</div>`
+        return
+      }
+      const options = data.map((p: any) => `<option value='${p.id}'>${p.nome}</option>`).join('')
+      const html = `
+        <div style='display: flex; gap: 8px; align-items: end; margin-bottom: 1rem; flex-wrap: wrap;'>
+          <div class='form-group' style='flex: 1; min-width: 180px; margin: 0;'>
+            <label style='font-size: 11px; color: var(--text-secondary);'>Paciente</label>
+            <select id='notas-patient-filter' style='width: 100%;'>
+              <option value=''>Todos os pacientes</option>
+              ${options}
+            </select>
+          </div>
+          <button class='btn gerar-notas' style='background: var(--fill-accent); color: var(--on-accent); border: 0; margin-bottom: 2px;'>Gerar notas selecionadas</button>
+        </div>
+        ${data.filter((p: any) => !detalhadoPatientFilter || String(p.id) === String(detalhadoPatientFilter)).map((p: any) => {
+          const qtd = p.qtd_sessoes_nota || 1
+          const tipo = p.tipo_faturamento === 'pacote' ? `Pacote (${qtd} sessões)` : 'Imediato (1 sessão)'
+          const pendenteCount = p.sessoes?.length || 0
+          const total = p.sessoes?.reduce((sum: number, s: any) => sum + Number(s.valor || 0), 0) || 0
+          return `
+            <div class='card notas-patient-card' data-patient-id='${p.id}' style='margin-bottom: 0.75rem;'>
+              <div style='display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 0.75rem;'>
+                <div>
+                  <div style='font-weight: 500; font-size: 15px;'>${p.nome}</div>
+                  <div style='font-size: 12px; color: var(--text-secondary);'>${tipo} · Pendentes: ${pendenteCount} · Total: ${fmtMoney(total)}</div>
+                </div>
+                <label style='font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;'>
+                  <input type='checkbox' class='select-patient' data-patient-id='${p.id}'>
+                  Selecionar todas
+                </label>
+              </div>
+              <div style='display: grid; gap: 8px;'>
+                ${(p.sessoes || []).map((s: any) => `
+                  <label style='display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 0.5px solid var(--border); cursor: pointer;'>
+                    <div style='display: flex; align-items: center; gap: 10px;'>
+                      <input type='checkbox' class='nota-check' data-id='${s.id}' data-patient-id='${p.id}'>
+                      <span style='font-size: 13px;'>${fmtDateBR(s.data_hora)} · ${fmtTime(s.data_hora)}</span>
+                    </div>
+                    <span style='font-size: 13px; font-weight: 500;'>${fmtMoney(Number(s.valor || 0))}</span>
+                  </label>
+                `).join('')}
+              </div>
+            </div>
+          `
+        }).join('')}
+      `
+      container.innerHTML = html
+      const filter = document.getElementById('notas-patient-filter') as HTMLSelectElement | null
+      if (filter) {
+        filter.value = String(detalhadoPatientFilter)
+        filter.addEventListener('change', () => {
+          detalhadoPatientFilter = filter.value ? Number(filter.value) : ''
+          renderNotasDetalhado()
+        })
+      }
+    })
+    .catch(e => {
+      container.innerHTML = `<div class='empty-state'>Erro ao carregar notas: ${e.message}</div>`
+    })
+}
+
+function renderNotasGeradas() {
+  const container = document.getElementById('notas-geradas')
+  if (!container) return
+  const geradas = sessions.filter(s => s.faturada && s.status !== 'cancelada')
+  if (geradas.length === 0) {
+    container.innerHTML = `<div class='empty-state'>Nenhuma nota gerada ainda.</div>`
+    return
+  }
+  const grouped = geradas.reduce((acc: any, s: any) => {
+    const pid = s.patient_id
+    if (!acc[pid]) acc[pid] = { nome: s.paciente_nome, sessoes: [], total: 0 }
+    acc[pid].sessoes.push(s)
+    acc[pid].total += Number(s.valor || 0)
+    return acc
+  }, {})
+  const html = `
+    <div class='metrics-grid' style='margin-bottom: 1rem;'>
+      <div class='metric-card'><div class='metric-label'>Notas geradas</div><div class='metric-value'>${geradas.length}</div></div>
+      <div class='metric-card'><div class='metric-label'>Total faturado</div><div class='metric-value'>${fmtMoney(geradas.reduce((sum: number, s: any) => sum + Number(s.valor || 0), 0))}</div></div>
+    </div>
+    ${Object.values(grouped).map((g: any) => `
+      <div class='card' style='margin-bottom: 0.75rem;'>
+        <div style='display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 0.75rem;'>
+          <div>
+            <div style='font-weight: 500; font-size: 15px;'>${g.nome}</div>
+            <div style='font-size: 12px; color: var(--text-secondary);'>${g.sessoes.length} sessão(ões) faturada(s) · Total: ${fmtMoney(g.total)}</div>
+          </div>
+        </div>
+        <div style='display: grid; gap: 8px;'>
+          ${g.sessoes.map((s: any) => `
+            <div style='display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 0.5px solid var(--border);'>
+              <span style='font-size: 13px;'>${fmtDateBR(s.data_hora)} · ${fmtTime(s.data_hora)}</span>
+              <span style='font-size: 13px; font-weight: 500;'>${fmtMoney(Number(s.valor || 0))}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('')}
+  `
+  container.innerHTML = html
+}
+
 function setupNotas() {
   const overlay = document.getElementById('invoice-modal-overlay')
   const close = document.getElementById('close-invoice')
-  const list = document.getElementById('notas-list')
+  const geral = document.getElementById('notas-geral')
+  const detalhado = document.getElementById('notas-detalhado')
   const email = document.getElementById('invoice-email') as HTMLAnchorElement | null
   const whatsapp = document.getElementById('invoice-whatsapp') as HTMLAnchorElement | null
 
@@ -1193,18 +1535,54 @@ function setupNotas() {
     if (e.target === overlay) overlay?.classList.remove('show')
   })
 
-  list?.addEventListener('click', async (e) => {
+  function changeNotasTab(tab: string) {
+    activeNotasTab = tab
+    document.querySelectorAll('.notas-tab').forEach(t => {
+      t.classList.remove('active')
+      const el = t as HTMLElement
+      el.style.background = ''
+      el.style.color = ''
+      el.style.borderColor = ''
+    })
+    const active = document.querySelector(`.notas-tab[data-notas-tab="${tab}"]`)
+    active?.classList.add('active')
+    renderNotas()
+  }
+
+  document.querySelectorAll('.notas-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const t = tab.getAttribute('data-notas-tab')
+      if (t) changeNotasTab(t)
+    })
+  })
+
+  geral?.addEventListener('click', (e) => {
     const target = e.target as HTMLElement
-    if (!target.classList.contains('gerar-nota')) return
-    const id = Number(target.getAttribute('data-id'))
-    const p = notasPendentes.find(x => x.id === id)
-    if (!p) return
-    const qtd = p.tipo_faturamento === 'imediato' ? 1 : (p.qtd_sessoes_nota || 1)
-    const pendentes = (p.sessoes || []).filter((s: any) => !s.faturada)
-    const selecionadas = pendentes.slice(0, Math.min(qtd, pendentes.length))
-    const session_ids = selecionadas.map((s: any) => s.id)
+    const btn = target.closest('.ver-detalhes') as HTMLElement | null
+    if (!btn) return
+    const pid = btn.getAttribute('data-patient-id')
+    if (!pid) return
+    detalhadoPatientFilter = Number(pid)
+    changeNotasTab('detalhado')
+  })
+
+  detalhado?.addEventListener('change', (e) => {
+    const target = e.target as HTMLElement
+    if (!target.classList.contains('select-patient')) return
+    const pid = target.getAttribute('data-patient-id')
+    const checked = (target as HTMLInputElement).checked
+    detalhado?.querySelectorAll<HTMLInputElement>(`.nota-check[data-patient-id="${pid}"]`).forEach(cb => {
+      cb.checked = checked
+    })
+  })
+
+  detalhado?.addEventListener('click', async (e) => {
+    const target = e.target as HTMLElement
+    if (!target.classList.contains('gerar-notas')) return
+    const checkboxes = detalhado.querySelectorAll<HTMLInputElement>('.nota-check:checked')
+    const session_ids = Array.from(checkboxes).map(cb => Number(cb.getAttribute('data-id')))
     if (session_ids.length === 0) {
-      alert('Nenhuma sessão pendente para faturar.')
+      alert('Selecione ao menos uma sessão para gerar nota.')
       return
     }
     try {
@@ -1213,44 +1591,38 @@ function setupNotas() {
       sessions = novas.map(x => ({ ...x, valor: Number(x.valor || 0) }))
       renderAll()
       renderNotas()
-      setText('invoice-modal-title', `Nota - ${p.nome}`)
+      setText('invoice-modal-title', 'Notas geradas')
       const itens = res.sessoes.map((s: any) => `
         <div style='display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 0.5px solid var(--border);'>
-          <span>${fmtDateBR(s.data_hora)} · ${fmtTime(s.data_hora)}</span>
+          <span>${s.paciente_nome || 'Paciente'} · ${fmtDateBR(s.data_hora)} · ${fmtTime(s.data_hora)}</span>
           <span>${fmtMoney(Number(s.valor || 0))}</span>
         </div>
       `).join('')
       setHtml('invoice-modal-body', `
-        <div style='margin-bottom: 0.5rem; font-weight: 500;'>Paciente: ${p.nome}</div>
-        <div style='margin-bottom: 1rem; color: var(--text-secondary);'>Total: ${fmtMoney(res.total || 0)}</div>
+        <div style='margin-bottom: 1rem; color: var(--text-secondary);'>Total: ${fmtMoney(res.total || 0)} · ${res.sessoes.length} sessão(ões)</div>
         ${itens}
       `)
       const linhas = [
-        `Nota de serviço - ${p.nome}`,
+        'Notas de serviço',
         '',
-        ...res.sessoes.map((s: any) => `- ${fmtDateBR(s.data_hora)} · ${fmtTime(s.data_hora)}: ${fmtMoney(Number(s.valor || 0))}`),
+        ...res.sessoes.map((s: any) => `- ${s.paciente_nome || 'Paciente'} · ${fmtDateBR(s.data_hora)} · ${fmtTime(s.data_hora)}: ${fmtMoney(Number(s.valor || 0))}`),
         '',
         `Total: ${fmtMoney(res.total || 0)}`
       ]
       const texto = linhas.join(String.fromCharCode(10))
-      if (email) email.href = `mailto:?subject=${encodeURIComponent('Nota de serviço')}&body=${encodeURIComponent(texto)}`
+      if (email) email.href = `mailto:?subject=${encodeURIComponent('Notas de serviço')}&body=${encodeURIComponent(texto)}`
       if (whatsapp) whatsapp.href = `https://wa.me/?text=${encodeURIComponent(texto)}`
       overlay?.classList.add('show')
     } catch (err: any) {
       alert('Erro ao gerar nota: ' + err.message)
     }
   })
+
+  changeNotasTab('geral')
 }
 
-async function init() {
+async function loadApp() {
   try {
-    const login = await api<LoginRes>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email: 'demo@psicoapp.local', password: '123456' }),
-    })
-    token = login.token
-    setText('user-name', login.user.nome)
-
     const [d, p, s] = await Promise.all([
       api<Dashboard>('/dashboard'),
       api<Patient[]>('/patients'),
@@ -1273,6 +1645,40 @@ async function init() {
     console.error(e)
     document.body.insertAdjacentHTML('afterbegin', `<div style="padding:1rem;color:#dc2626;background:#fee2e2;">Erro ao carregar: ${e.message}</div>`)
   }
+}
+
+function setupLogin() {
+  const btn = document.getElementById('login-btn')
+  const emailInput = document.getElementById('login-email') as HTMLInputElement | null
+  const passInput = document.getElementById('login-password') as HTMLInputElement | null
+  if (emailInput) emailInput.value = 'demo@psicoapp.local'
+  if (passInput) passInput.value = '123456'
+
+  btn?.addEventListener('click', async () => {
+    const email = emailInput?.value.trim() || ''
+    const password = passInput?.value || ''
+    if (!email || !password) {
+      alert('Informe e-mail e senha.')
+      return
+    }
+    try {
+      const login = await api<LoginRes>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      })
+      token = login.token
+      setText('user-name', login.user.nome)
+      await loadApp()
+      navigateTo('dashboard')
+    } catch (e: any) {
+      alert('Erro ao entrar: ' + e.message)
+    }
+  })
+}
+
+async function init() {
+  setupLogin()
+  navigateTo('login')
 }
 
 init()

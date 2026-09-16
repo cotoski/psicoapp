@@ -49,6 +49,10 @@ body { margin: 0; }
 .content { flex: 1; overflow-y: auto; padding: 1.5rem; }
 .page { display: none; }
 .page.active { display: block; }
+#login.page.active { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem; }
+.notas-section { display: none; }
+.notas-section.active { display: block; }
+.notas-tab.active { background: var(--bg-accent); color: var(--text-accent); border-color: var(--border-accent); }
 .section-title { font-size: 18px; font-weight: 500; margin-bottom: 1.5rem; }
 .card { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; }
 .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
