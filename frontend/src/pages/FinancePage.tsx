@@ -155,6 +155,7 @@ export function FinancePage() {
       load()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Faturamento falhou.')
+    } finally {
       setBusy(false)
     }
   }
@@ -241,6 +242,11 @@ export function FinancePage() {
             Documento interno (prévia no estilo NFS-e) — a emissão fiscal real
             exige integração com a prefeitura.
           </p>
+          {(invoice.notas ?? []).length === 0 && (
+            <p className="empty-state">
+              Nenhuma sessão nova foi faturada (já estavam faturadas).
+            </p>
+          )}
           {(invoice.notas ?? []).map((n, i) => (
             <div className="nota-doc" key={i}>
               <div className="nota-header">
