@@ -19,6 +19,7 @@ import {
   financeRouter,
   dashboardRouter,
 } from './modules/billing/routes.js'
+import { taxRouter } from './modules/tax/routes.js'
 import { requireAuth } from './shared/middleware/auth.js'
 import { tenantContext } from './shared/middleware/tenancy.js'
 
@@ -65,6 +66,7 @@ export function createApp({ config, logger, db, readinessChecks = [] }: AppDeps)
   api.use('/billing', billingRouter({ db }))
   api.use('/finance', financeRouter({ db }))
   api.use('/dashboard', dashboardRouter({ db }))
+  api.use('/tax', taxRouter({ db }))
   app.use('/api/v1', api)
 
   app.use(notFound)
