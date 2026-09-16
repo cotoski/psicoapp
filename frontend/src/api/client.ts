@@ -7,12 +7,18 @@
  */
 const BASE = '/api/v1'
 
+export interface FieldIssue {
+  path: string
+  message: string
+}
+
 export class ApiError extends Error {
   constructor(
     public code: string,
     message: string,
     public status: number,
     public requestId?: string,
+    public details?: FieldIssue[],
   ) {
     super(message)
   }
@@ -85,7 +91,12 @@ async function rawRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (res.status === 204) return undefined as T
 
   const body = (await res.json().catch(() => null)) as {
-    error?: { code?: string; message?: string; requestId?: string }
+    error?: {
+      code?: string
+      message?: string
+      requestId?: string
+      details?: FieldIssue[]
+    }
   } | null
 
   if (!res.ok) {
@@ -94,6 +105,7 @@ async function rawRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
       body?.error?.message ?? `Erro ${res.status}`,
       res.status,
       body?.error?.requestId,
+      body?.error?.details,
     )
   }
   return body as T

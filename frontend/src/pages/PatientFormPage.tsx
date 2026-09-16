@@ -5,6 +5,7 @@ import { WEEK_DAYS, type Frequencia, type Patient, type WeekDay } from '../api/t
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input, Select, Textarea } from '../components/ui/Input'
+import { maskCpf } from '../utils/format'
 
 interface FormState {
   nome: string
@@ -125,11 +126,12 @@ export function PatientFormPage() {
         navigate(`/pacientes/${created.id}`)
       }
     } catch (err) {
-      setError(
-        err instanceof ApiError && err.code === 'VALIDATION_ERROR'
-          ? 'Verifique os campos: ' + (err.message || 'dados inválidos')
-          : 'Não foi possível salvar. Tente novamente.',
-      )
+      if (err instanceof ApiError && err.code === 'VALIDATION_ERROR') {
+        const fields = err.details?.map((d) => `${d.path}: ${d.message}`).join(' · ')
+        setError(`Dados inválidos${fields ? ` — ${fields}` : ''}`)
+      } else {
+        setError('Não foi possível salvar. Tente novamente.')
+      }
     } finally {
       setBusy(false)
     }
@@ -148,7 +150,7 @@ export function PatientFormPage() {
         <Card>
           <h2 className="section-subtitle">Dados básicos</h2>
           <Input label="Nome *" name="nome" value={form.nome} onChange={(e) => set('nome', e.target.value)} required />
-          <Input label="CPF" name="cpf" placeholder="000.000.000-00" value={form.cpf} onChange={(e) => set('cpf', e.target.value)} />
+          <Input label="CPF" name="cpf" placeholder="000.000.000-00" inputMode="numeric" maxLength={14} value={form.cpf} onChange={(e) => set('cpf', maskCpf(e.target.value))} />
           <Input label="Telefone" name="telefone" value={form.telefone} onChange={(e) => set('telefone', e.target.value)} />
           <Input label="E-mail" name="email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
           <Input label="Data de nascimento" name="dataNascimento" type="date" value={form.dataNascimento} onChange={(e) => set('dataNascimento', e.target.value)} />
