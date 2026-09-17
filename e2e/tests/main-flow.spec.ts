@@ -14,6 +14,21 @@ async function registerTenant(request: APIRequestContext, email: string) {
     },
   })
   if (res.status() !== 201) throw new Error(`register falhou: ${res.status()} ${await res.text()}`)
+  // Empresa completa é pré-requisito para criar pacientes
+  const { accessToken } = await res.json()
+  const company = await request.put('/api/v1/tenants/me', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    data: {
+      cnpj: '12.345.678/0001-90',
+      cep: '01310-100',
+      logradouro: 'Av. Paulista',
+      numero: '1000',
+      bairro: 'Bela Vista',
+      cidade: 'São Paulo',
+      uf: 'SP',
+    },
+  })
+  if (company.status() !== 200) throw new Error(`empresa falhou: ${await company.text()}`)
 }
 
 test('fluxo completo: login → paciente → agenda → prontuário → faturar', async ({

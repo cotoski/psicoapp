@@ -1,5 +1,8 @@
 import type { Db } from '../../db/client.js'
 import type { Config } from '../../config.js'
+import { eq } from 'drizzle-orm'
+import { tenants } from '../../db/schema.js'
+import { isCompanyComplete } from '../tenants/company.js'
 import { AppError } from '../../shared/errors.js'
 import { encryptField, decryptField } from '../../shared/crypto/fieldEncrypt.js'
 import { recordAudit } from '../audit/service.js'
@@ -89,6 +92,20 @@ export class PatientsService {
   }
 
   async create(actor: ActorCtx, input: CreatePatientInput) {
+    // Paciente só nasce com empresa cadastrada (CNPJ + endereço) — a nota
+    // de serviços depende desses dados do prestador.
+    const [tenant] = await this.db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.id, actor.tenantId))
+      .limit(1)
+    if (!tenant || !isCompanyComplete(tenant)) {
+      throw new AppError(
+        428,
+        'COMPANY_REQUIRED',
+        'Cadastre a empresa (CNPJ e endereço) em Empresa antes de criar pacientes.',
+      )
+    }
     const dataReajuste =
       input.dataReajuste ?? addMonthsRec(todayRecISO(), input.mesesCiclo)
     const row = await this.repo.create(actor.tenantId, {

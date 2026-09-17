@@ -1,4 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { Loader2, MapPin } from 'lucide-react'
 import { apiGet, apiPut, ApiError } from '../api/client'
 import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
@@ -20,9 +21,19 @@ interface Company {
   uf: string | null
   telefone: string | null
   emailContato: string | null
+  companyComplete: boolean
 }
 
-type CompanyForm = Record<keyof Company, string>
+interface CepResult {
+  cep: string
+  logradouro: string | null
+  complemento: string | null
+  bairro: string | null
+  cidade: string | null
+  uf: string | null
+}
+
+type CompanyForm = Record<keyof Omit<Company, 'companyComplete'>, string>
 
 const EMPTY: CompanyForm = {
   name: '',
@@ -66,6 +77,9 @@ export function EmpresaPage() {
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [cepBusy, setCepBusy] = useState(false)
+  const [cepError, setCepError] = useState<string | null>(null)
+  const lastCep = useRef('')
 
   useEffect(() => {
     apiGet<Company>('/tenants/me')
@@ -92,6 +106,38 @@ export function EmpresaPage() {
   function set(field: keyof CompanyForm, value: string) {
     setSaved(false)
     setForm((f) => ({ ...f, [field]: value }))
+  }
+
+  // Consulta o CEP no backend (proxy ViaCEP) e preenche o endereço.
+  // lastCep evita consulta duplicada ao digitar/sair do campo.
+  async function lookupCep(raw: string) {
+    const digits = raw.replace(/\D/g, '')
+    if (digits.length !== 8 || digits === lastCep.current) return
+    lastCep.current = digits
+    setCepBusy(true)
+    setCepError(null)
+    try {
+      const r = await apiGet<CepResult>(`/tenants/cep/${digits}`)
+      setSaved(false)
+      setForm((f) => ({
+        ...f,
+        cep: r.cep ?? f.cep,
+        logradouro: r.logradouro ?? f.logradouro,
+        bairro: r.bairro ?? f.bairro,
+        cidade: r.cidade ?? f.cidade,
+        uf: r.uf ?? f.uf,
+        complemento: f.complemento || (r.complemento ?? ''),
+      }))
+    } catch (err) {
+      lastCep.current = ''
+      setCepError(
+        err instanceof ApiError && err.status === 404
+          ? 'CEP não encontrado.'
+          : 'Não foi possível consultar o CEP. Preencha manualmente.',
+      )
+    } finally {
+      setCepBusy(false)
+    }
   }
 
   async function submit(e: FormEvent) {
@@ -154,6 +200,7 @@ export function EmpresaPage() {
                 placeholder="00.000.000/0000-00"
                 inputMode="numeric"
                 maxLength={18}
+                required
               />
               <Input
                 label="Inscrição municipal"
@@ -185,12 +232,37 @@ export function EmpresaPage() {
             <CardTitle>Endereço</CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="mb-1 flex items-start gap-2 text-xs text-muted-foreground">
+              <MapPin className="mt-0.5 size-3.5 shrink-0" />
+              Digite o CEP — o endereço é preenchido automaticamente.
+            </div>
+            <div className="relative">
+              <Input
+                label="CEP"
+                name="cep"
+                value={form.cep}
+                onChange={(e) => {
+                  set('cep', maskCep(e.target.value))
+                  void lookupCep(e.target.value)
+                }}
+                onBlur={(e) => void lookupCep(e.target.value)}
+                placeholder="00000-000"
+                inputMode="numeric"
+                maxLength={9}
+                required
+                error={cepError ?? undefined}
+              />
+              {cepBusy && (
+                <Loader2 className="pointer-events-none absolute right-3 top-[2.1rem] size-4 animate-spin text-muted-foreground" />
+              )}
+            </div>
             <div className="grid gap-x-4 sm:grid-cols-[1fr_8rem]">
               <Input
                 label="Logradouro"
                 name="logradouro"
                 value={form.logradouro}
                 onChange={(e) => set('logradouro', e.target.value)}
+                required
               />
               <Input
                 label="Número"
@@ -211,14 +283,16 @@ export function EmpresaPage() {
                 name="bairro"
                 value={form.bairro}
                 onChange={(e) => set('bairro', e.target.value)}
+                required
               />
             </div>
-            <div className="grid gap-x-4 sm:grid-cols-[1fr_6rem_9rem]">
+            <div className="grid gap-x-4 sm:grid-cols-[1fr_6rem]">
               <Input
                 label="Cidade"
                 name="cidade"
                 value={form.cidade}
                 onChange={(e) => set('cidade', e.target.value)}
+                required
               />
               <Input
                 label="UF"
@@ -227,19 +301,11 @@ export function EmpresaPage() {
                 onChange={(e) => set('uf', e.target.value.toUpperCase().slice(0, 2))}
                 maxLength={2}
                 placeholder="SP"
-              />
-              <Input
-                label="CEP"
-                name="cep"
-                value={form.cep}
-                onChange={(e) => set('cep', maskCep(e.target.value))}
-                placeholder="00000-000"
-                inputMode="numeric"
-                maxLength={9}
+                required
               />
             </div>
             <div className="flex justify-end">
-              <Button type="submit" disabled={busy}>
+              <Button type="submit" disabled={busy || cepBusy}>
                 {busy ? 'Salvando…' : 'Salvar'}
               </Button>
             </div>

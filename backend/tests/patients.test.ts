@@ -38,6 +38,47 @@ describe.skipIf(!hasDb)('patients (integração)', () => {
     await truncateAll(db!)
   })
 
+  it('sem empresa completa → 428 COMPANY_REQUIRED; depois de completar → 201', async () => {
+    // Registro cru, sem completar a empresa
+    const reg = await request(app).post('/api/v1/auth/register').send({
+      email: 'sem-empresa@x.test',
+      password: 'senha-forte-123',
+      nome: 'Dra. Sem',
+      tenantName: 'Sem Empresa',
+    })
+    const auth = { Authorization: `Bearer ${reg.body.accessToken}` }
+
+    const blocked = await request(app).post('/api/v1/patients').set(auth).send(validPatient)
+    expect(blocked.status).toBe(428)
+    expect(blocked.body.error.code).toBe('COMPANY_REQUIRED')
+
+    // Só CNPJ não basta — endereço é obrigatório junto
+    const partial = await request(app)
+      .put('/api/v1/tenants/me')
+      .set(auth)
+      .send({ cnpj: '12.345.678/0001-90' })
+    expect(partial.status).toBe(200)
+    expect(partial.body.companyComplete).toBe(false)
+    const stillBlocked = await request(app)
+      .post('/api/v1/patients')
+      .set(auth)
+      .send(validPatient)
+    expect(stillBlocked.status).toBe(428)
+
+    await request(app)
+      .put('/api/v1/tenants/me')
+      .set(auth)
+      .send({
+        cep: '01310-100',
+        logradouro: 'Av. Paulista',
+        bairro: 'Bela Vista',
+        cidade: 'São Paulo',
+        uf: 'SP',
+      })
+    const ok = await request(app).post('/api/v1/patients').set(auth).send(validPatient)
+    expect(ok.status).toBe(201)
+  })
+
   it('CRUD completo com defaults do legado (qtd sessões, data_reajuste)', async () => {
     const a = await registerUserAs(app, 'a@x.test')
     const auth = { Authorization: `Bearer ${a.token}` }

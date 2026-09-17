@@ -53,6 +53,23 @@ export async function registerUserAs(
       tenantName: `Tenant ${email}`,
     })
   if (res.status !== 201) throw new Error(`register falhou: ${JSON.stringify(res.body)}`)
-  const payload = jwt.decode(res.body.accessToken) as { sub: string; tid: string }
-  return { token: res.body.accessToken, userId: payload.sub, tenantId: payload.tid, email }
+  const token = res.body.accessToken as string
+  // Empresa completa é pré-requisito para criar pacientes (COMPANY_REQUIRED)
+  const company = await request(app)
+    .put('/api/v1/tenants/me')
+    .set('Authorization', `Bearer ${token}`)
+    .send({
+      cnpj: '12.345.678/0001-90',
+      cep: '01310-100',
+      logradouro: 'Av. Paulista',
+      numero: '1000',
+      bairro: 'Bela Vista',
+      cidade: 'São Paulo',
+      uf: 'SP',
+    })
+  if (company.status !== 200) {
+    throw new Error(`setup da empresa falhou: ${JSON.stringify(company.body)}`)
+  }
+  const payload = jwt.decode(token) as { sub: string; tid: string }
+  return { token, userId: payload.sub, tenantId: payload.tid, email }
 }

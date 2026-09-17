@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Building2 } from 'lucide-react'
 import { apiGet, apiPost, apiPut, ApiError } from '../api/client'
 import { WEEK_DAYS, type Frequencia, type Patient, type WeekDay } from '../api/types'
 import { Alert } from '../components/ui/Alert'
@@ -75,6 +76,8 @@ export function PatientFormPage() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(editing)
+  // null = ainda verificando; true = empresa completa, pode criar
+  const [companyReady, setCompanyReady] = useState<boolean | null>(editing ? true : null)
 
   useEffect(() => {
     if (!editing) return
@@ -83,6 +86,13 @@ export function PatientFormPage() {
       .catch(() => setError('Paciente não encontrado.'))
       .finally(() => setLoading(false))
   }, [editing, id])
+
+  useEffect(() => {
+    if (editing) return
+    apiGet<{ companyComplete: boolean }>('/tenants/me')
+      .then((t) => setCompanyReady(t.companyComplete))
+      .catch(() => setCompanyReady(true)) // falha na checagem → backend decide no submit
+  }, [editing])
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }))
@@ -130,7 +140,9 @@ export function PatientFormPage() {
         navigate(`/pacientes/${created.id}`)
       }
     } catch (err) {
-      if (err instanceof ApiError && err.code === 'VALIDATION_ERROR') {
+      if (err instanceof ApiError && err.code === 'COMPANY_REQUIRED') {
+        setCompanyReady(false)
+      } else if (err instanceof ApiError && err.code === 'VALIDATION_ERROR') {
         const fields = err.details?.map((d) => `${d.path}: ${d.message}`).join(' · ')
         setError(`Dados inválidos${fields ? ` — ${fields}` : ''}`)
       } else {
@@ -141,7 +153,30 @@ export function PatientFormPage() {
     }
   }
 
-  if (loading) return <Loading />
+  if (loading || companyReady === null) return <Loading />
+
+  if (!companyReady) {
+    return (
+      <div className="max-w-2xl">
+        <PageHeader title="Novo paciente" />
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
+            <Building2 className="size-10 text-muted-foreground" />
+            <div>
+              <p className="font-medium">Cadastre a empresa primeiro</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Antes de cadastrar pacientes é necessário completar os dados da
+                empresa (CNPJ e endereço).
+              </p>
+            </div>
+            <Button asChild>
+              <Link to="/empresa">Completar cadastro da empresa</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   const geraAgenda = form.diasSemana.length > 0 && Boolean(form.horario)
   const agendaIncompleta = !geraAgenda && (form.diasSemana.length > 0 || Boolean(form.horario))
