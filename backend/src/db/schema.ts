@@ -77,7 +77,12 @@ export const users = pgTable('users', {
   nome: text('nome').notNull(),
   crp: varchar('crp', { length: 20 }),
   role: userRole('role').notNull().default('OWNER'),
+  // Segredo TOTP criptografado (AES-256-GCM em base64); totp_enabled separa
+  // "configuração pendente" de "2FA ativo" — login só desafia quando true.
   totpSecret: text('totp_secret'),
+  totpEnabled: boolean('totp_enabled').notNull().default(false),
+  avatar: bytea('avatar'),
+  avatarMime: varchar('avatar_mime', { length: 100 }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .defaultNow()
@@ -100,6 +105,37 @@ export const refreshTokens = pgTable(
     userAgent: text('user_agent'),
   },
   (t) => [index('idx_refresh_tokens_user').on(t.userId)],
+)
+
+// Reset de senha — token opaco vai por e-mail; aqui só o hash (como refresh_tokens)
+export const passwordResetTokens = pgTable(
+  'password_reset_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index('idx_password_reset_tokens_user').on(t.userId)],
+)
+
+// Códigos de backup do 2FA — uso único, só hash no banco
+export const backupCodes = pgTable(
+  'backup_codes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    codeHash: text('code_hash').notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index('idx_backup_codes_user').on(t.userId)],
 )
 
 export const patients = pgTable(

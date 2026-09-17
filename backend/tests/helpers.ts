@@ -27,7 +27,7 @@ export function testDb(): Db {
 
 export async function truncateAll(db: Db) {
   await db.execute(
-    'TRUNCATE audit_events, session_records, appointments, patients, tax_config, refresh_tokens, users, tenants CASCADE',
+    'TRUNCATE audit_events, session_records, appointments, patients, tax_config, refresh_tokens, password_reset_tokens, users, tenants CASCADE',
   )
 }
 

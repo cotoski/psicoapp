@@ -1,18 +1,25 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
+  apiBlob,
   apiGet,
   apiPost,
   refreshSession,
   setAccessToken,
   setSessionExpiredHandler,
   type AuthUser,
+  type LoginResponse,
 } from '../api/client'
 
 interface AuthState {
   user: AuthUser | null
   loading: boolean
-  login: (email: string, senha: string) => Promise<void>
+  avatarUrl: string | null
+  /** Retorna o pendingToken quando a conta exige o segundo fator. */
+  login: (email: string, senha: string) => Promise<string | null>
+  verify2fa: (pendingToken: string, code: string) => Promise<void>
   logout: () => Promise<void>
+  updateUser: (user: AuthUser) => void
+  refreshAvatar: () => void
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -20,6 +27,9 @@ const AuthContext = createContext<AuthState | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [avatarTick, setAvatarTick] = useState(0)
+  const avatarRef = useRef<string | null>(null)
 
   useEffect(() => {
     setSessionExpiredHandler(() => setUser(null))
@@ -31,10 +41,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false))
   }, [])
 
-  const login = useCallback(async (email: string, senha: string) => {
-    const res = await apiPost<{ user: AuthUser; accessToken: string }>('/auth/login', {
+  // Foto de perfil via fetch autenticado → objectURL (o <img> comum não
+  // enviaria o Bearer token).
+  useEffect(() => {
+    if (!user) {
+      setAvatarUrl(null)
+      return
+    }
+    let cancelled = false
+    apiBlob('/auth/me/avatar')
+      .then((blob) => {
+        if (cancelled) return
+        const url = URL.createObjectURL(blob)
+        if (avatarRef.current) URL.revokeObjectURL(avatarRef.current)
+        avatarRef.current = url
+        setAvatarUrl(url)
+      })
+      .catch(() => {
+        if (!cancelled) setAvatarUrl(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id, avatarTick])
+
+  const login = useCallback(async (email: string, senha: string): Promise<string | null> => {
+    const res = await apiPost<LoginResponse>('/auth/login', {
       email,
       password: senha,
+    })
+    if ('requires2fa' in res) return res.pendingToken
+    setAccessToken(res.accessToken)
+    setUser(res.user)
+    return null
+  }, [])
+
+  const verify2fa = useCallback(async (pendingToken: string, code: string) => {
+    const res = await apiPost<{ user: AuthUser; accessToken: string }>('/auth/login/2fa', {
+      pendingToken,
+      code,
     })
     setAccessToken(res.accessToken)
     setUser(res.user)
@@ -46,8 +91,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }, [])
 
+  const updateUser = useCallback((u: AuthUser) => setUser(u), [])
+  const refreshAvatar = useCallback(() => setAvatarTick((t) => t + 1), [])
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider
+      value={{ user, loading, avatarUrl, login, verify2fa, logout, updateUser, refreshAvatar }}
+    >
       {children}
     </AuthContext.Provider>
   )

@@ -15,6 +15,20 @@
       "when": 1789600576640,
       "tag": "0001_tenant_company",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789661781292,
+      "tag": "0002_loose_morlun",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789663552989,
+      "tag": "0003_funny_ben_urich",
+      "breakpoints": true
     }
   ]
 }

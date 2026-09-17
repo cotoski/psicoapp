@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   Brain,
   Building2,
@@ -6,6 +6,7 @@ import {
   CalendarDays,
   LayoutDashboard,
   LogOut,
+  UserRound,
   Users,
   Wallet,
   type LucideIcon,
@@ -27,6 +28,7 @@ const NAV: NavItem[] = [
   { to: '/financeiro', label: 'Financeiro', icon: Wallet },
   { to: '/tributos', label: 'Tributos', icon: Calculator },
   { to: '/empresa', label: 'Empresa', icon: Building2 },
+  { to: '/conta', label: 'Minha conta', icon: UserRound },
 ]
 
 function Brand() {
@@ -50,8 +52,30 @@ function navItemClass(isActive: boolean) {
   )
 }
 
+function Avatar({ url, initials, className }: { url: string | null; initials: string; className?: string }) {
+  if (url) {
+    return (
+      <img
+        src={url}
+        alt=""
+        className={cn('shrink-0 rounded-full object-cover', className)}
+      />
+    )
+  }
+  return (
+    <div
+      className={cn(
+        'grid shrink-0 place-items-center rounded-full bg-accent font-semibold text-accent-foreground',
+        className,
+      )}
+    >
+      {initials}
+    </div>
+  )
+}
+
 export function AppLayout() {
-  const { user, logout } = useAuth()
+  const { user, logout, avatarUrl } = useAuth()
   const { pathname } = useLocation()
   const current =
     NAV.find((n) => (n.end ? pathname === n.to : pathname.startsWith(n.to)))?.label ?? 'PsicoApp'
@@ -67,7 +91,7 @@ export function AppLayout() {
     <div className="flex min-h-screen">
       {/* Sidebar — desktop */}
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r bg-card md:flex">
-        <div className="border-b px-5 py-4">
+        <div className="flex h-14 items-center border-b px-5">
           <Brand />
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
@@ -84,14 +108,18 @@ export function AppLayout() {
           ))}
         </nav>
         <div className="border-t p-3">
-          <div className="flex items-center gap-3 rounded-lg px-2 py-1.5">
-            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent text-xs font-semibold text-accent-foreground">
-              {initials}
-            </div>
-            <div className="min-w-0 flex-1 leading-tight">
-              <div className="truncate text-sm font-medium">{user?.nome}</div>
-              <div className="truncate text-xs text-muted-foreground">{user?.email}</div>
-            </div>
+          <div className="flex items-center gap-1">
+            <Link
+              to="/conta"
+              title="Minha conta"
+              className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-accent/60"
+            >
+              <Avatar url={avatarUrl} initials={initials} className="h-8 w-8 text-xs" />
+              <div className="min-w-0 flex-1 leading-tight">
+                <div className="truncate text-sm font-medium">{user?.nome}</div>
+                <div className="truncate text-xs text-muted-foreground">{user?.email}</div>
+              </div>
+            </Link>
             <button
               onClick={() => void logout()}
               aria-label="Sair"
@@ -114,9 +142,7 @@ export function AppLayout() {
             <h1 className="hidden text-sm font-medium md:block">{current}</h1>
           </div>
           <div className="flex items-center gap-3">
-            <div className="grid h-8 w-8 place-items-center rounded-full bg-accent text-xs font-semibold text-accent-foreground md:hidden">
-              {initials}
-            </div>
+            <Avatar url={avatarUrl} initials={initials} className="h-8 w-8 text-xs md:hidden" />
             <button
               onClick={() => void logout()}
               aria-label="Sair"

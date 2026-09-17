@@ -18,6 +18,12 @@ const envSchema = z.object({
     .default('info'),
   ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(900),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
+  // Reset de senha por e-mail — Mailpit no dev (docker-compose :1025)
+  SMTP_HOST: z.string().default('localhost'),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(1025),
+  SMTP_FROM: z.string().default('PsicoApp <no-reply@psicoapp.local>'),
+  // URL pública do frontend — usada em links de e-mail
+  APP_URL: z.string().default('http://localhost:3000'),
 })
 
 export type Config = z.infer<typeof envSchema> & { corsOrigins: string[] }

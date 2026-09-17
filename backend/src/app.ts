@@ -65,7 +65,7 @@ export function createApp({ config, logger, db, readinessChecks = [] }: AppDeps)
   })
 
   const api = express.Router()
-  api.use('/auth', identityRouter({ db, config }))
+  api.use('/auth', identityRouter({ db, config, logger }))
 
   // Default-deny: tudo abaixo exige auth + tenant válido no banco
   api.use(requireAuth(config), tenantContext(db))

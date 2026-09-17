@@ -2,6 +2,9 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import { AppLayout } from './components/AppLayout'
 import { LoginPage } from './pages/LoginPage'
+import { RecuperarSenhaPage } from './pages/RecuperarSenhaPage'
+import { RedefinirSenhaPage } from './pages/RedefinirSenhaPage'
+import { ContaPage } from './pages/ContaPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { PatientsPage } from './pages/PatientsPage'
 import { AgendaPage } from './pages/AgendaPage'
@@ -26,6 +29,8 @@ export function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/recuperar-senha" element={<RecuperarSenhaPage />} />
+          <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
           <Route
             element={
               <RequireAuth>
@@ -43,6 +48,7 @@ export function App() {
             <Route path="/financeiro" element={<FinancePage />} />
             <Route path="/tributos" element={<TaxPage />} />
             <Route path="/empresa" element={<EmpresaPage />} />
+            <Route path="/conta" element={<ContaPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
