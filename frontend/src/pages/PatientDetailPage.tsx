@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, CalendarClock, CalendarX2, Pencil } from 'lucide-react'
 import { apiGet, apiPost, ApiError } from '../api/client'
+import { MeetingLink } from '../components/MeetingLink'
 import { STATUS_LABEL, type Appointment, type Page, type Patient } from '../api/types'
 import { Alert } from '../components/ui/Alert'
 import { Badge } from '../components/ui/Badge'
@@ -134,7 +135,7 @@ export function PatientDetailPage() {
                 value: patient.dataReajuste ? fmtDate(patient.dataReajuste) : '—',
               },
               { label: 'Ciclo', value: `${patient.mesesCiclo} meses` },
-              { label: 'Sala/link', value: patient.salaReuniao ?? '—' },
+              { label: 'Sala/link', value: <MeetingLink sala={patient.salaReuniao} /> },
               { label: 'Cadastro', value: fmtDateTime(patient.createdAt) },
             ]}
           />

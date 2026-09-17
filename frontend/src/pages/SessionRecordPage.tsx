@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ShieldAlert, X } from 'lucide-react'
+import { ArrowLeft, ShieldAlert, Video, X } from 'lucide-react'
 import { apiGet, apiPut, ApiError } from '../api/client'
 import { STATUS_LABEL, type Appointment } from '../api/types'
+import { meetingUrl, MeetingLink } from '../components/MeetingLink'
 import { Alert } from '../components/ui/Alert'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
@@ -116,6 +117,14 @@ export function SessionRecordPage() {
         </Button>
         <h1 className="text-xl font-semibold tracking-tight">{appt.patientNome ?? 'Atendimento'}</h1>
         <Badge tone={STATUS_LABEL[appt.status].tone}>{STATUS_LABEL[appt.status].label}</Badge>
+        {meetingUrl(appt.salaReuniao) && (
+          <Button size="sm" asChild>
+            <a href={meetingUrl(appt.salaReuniao)!} target="_blank" rel="noopener noreferrer">
+              <Video />
+              Entrar na sala
+            </a>
+          </Button>
+        )}
       </div>
 
       <Card className="mb-4">
@@ -125,7 +134,7 @@ export function SessionRecordPage() {
               { label: 'Data/hora', value: fmtDateTime(appt.startsAt) },
               { label: 'Duração', value: `${appt.duracao} min` },
               { label: 'Valor', value: fmtMoney(appt.valor) },
-              { label: 'Sala/link', value: appt.salaReuniao ?? '—' },
+              { label: 'Sala/link', value: <MeetingLink sala={appt.salaReuniao} /> },
             ]}
           />
         </CardContent>

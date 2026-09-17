@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarDays, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, Plus, Video } from 'lucide-react'
 import { apiGet, apiPost, apiPut, ApiError } from '../api/client'
+import { meetingUrl, MeetingLink } from '../components/MeetingLink'
 import {
   STATUS_LABEL,
   type Appointment,
@@ -455,7 +456,7 @@ function SessionModal({
           { label: 'Valor', value: fmtMoney(appt.valor) },
           { label: 'Status', value: STATUS_LABEL[appt.status].label },
           { label: 'Faturada', value: appt.faturada ? 'Sim' : 'Não' },
-          { label: 'Sala', value: appt.salaReuniao ?? '—' },
+          { label: 'Sala', value: <MeetingLink sala={appt.salaReuniao} /> },
         ]}
       />
 
@@ -499,9 +500,19 @@ function SessionModal({
         </form>
       )}
 
-      <Button size="sm" variant="secondary" onClick={() => navigate(`/agenda/${appt.id}`)}>
-        Abrir atendimento
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        {meetingUrl(appt.salaReuniao) && (
+          <Button size="sm" asChild>
+            <a href={meetingUrl(appt.salaReuniao)!} target="_blank" rel="noopener noreferrer">
+              <Video />
+              Entrar na sala
+            </a>
+          </Button>
+        )}
+        <Button size="sm" variant="secondary" onClick={() => navigate(`/agenda/${appt.id}`)}>
+          Abrir atendimento
+        </Button>
+      </div>
     </Modal>
   )
 }
