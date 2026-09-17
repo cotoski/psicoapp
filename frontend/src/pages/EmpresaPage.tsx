@@ -1,8 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { apiGet, apiPut, ApiError } from '../api/client'
+import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
-import { Card } from '../components/ui/Card'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
+import { Loading } from '../components/ui/LoadingState'
+import { PageHeader } from '../components/ui/PageHeader'
 
 interface Company {
   name: string
@@ -118,21 +121,23 @@ export function EmpresaPage() {
     }
   }
 
-  if (loading) return <div className="loading-state">Carregando…</div>
+  if (loading) return <Loading />
 
   return (
-    <div>
-      <h1 className="section-title">Empresa</h1>
-      <p className="section-subtitle">
-        Dados do prestador exibidos na nota de serviços gerada no Financeiro.
-      </p>
-      {error && <div className="alert-error">{error}</div>}
-      {saved && <div className="alert-success">Dados salvos.</div>}
+    <div className="max-w-3xl">
+      <PageHeader
+        title="Empresa"
+        subtitle="Dados do prestador exibidos na nota de serviços gerada no Financeiro."
+      />
+      {error && <Alert className="mb-4">{error}</Alert>}
+      {saved && <Alert tone="success" className="mb-4">Dados salvos.</Alert>}
 
-      <form onSubmit={submit}>
+      <form onSubmit={submit} className="space-y-4">
         <Card>
-          <h2 className="section-subtitle">Identificação</h2>
-          <div className="form-grid">
+          <CardHeader>
+            <CardTitle>Identificação</CardTitle>
+          </CardHeader>
+          <CardContent>
             <Input
               label="Razão social / Nome do consultório"
               name="name"
@@ -140,94 +145,105 @@ export function EmpresaPage() {
               onChange={(e) => set('name', e.target.value)}
               required
             />
-            <Input
-              label="CNPJ ou CPF"
-              name="cnpj"
-              value={form.cnpj}
-              onChange={(e) => set('cnpj', maskDoc(e.target.value))}
-              placeholder="00.000.000/0000-00"
-              inputMode="numeric"
-              maxLength={18}
-            />
-            <Input
-              label="Inscrição municipal"
-              name="inscricaoMunicipal"
-              value={form.inscricaoMunicipal}
-              onChange={(e) => set('inscricaoMunicipal', e.target.value)}
-            />
-            <Input
-              label="Telefone"
-              name="telefone"
-              value={form.telefone}
-              onChange={(e) => set('telefone', e.target.value)}
-            />
-            <Input
-              label="E-mail de contato"
-              name="emailContato"
-              type="email"
-              value={form.emailContato}
-              onChange={(e) => set('emailContato', e.target.value)}
-            />
-          </div>
+            <div className="grid gap-x-4 sm:grid-cols-2">
+              <Input
+                label="CNPJ ou CPF"
+                name="cnpj"
+                value={form.cnpj}
+                onChange={(e) => set('cnpj', maskDoc(e.target.value))}
+                placeholder="00.000.000/0000-00"
+                inputMode="numeric"
+                maxLength={18}
+              />
+              <Input
+                label="Inscrição municipal"
+                name="inscricaoMunicipal"
+                value={form.inscricaoMunicipal}
+                onChange={(e) => set('inscricaoMunicipal', e.target.value)}
+              />
+            </div>
+            <div className="grid gap-x-4 sm:grid-cols-2">
+              <Input
+                label="Telefone"
+                name="telefone"
+                value={form.telefone}
+                onChange={(e) => set('telefone', e.target.value)}
+              />
+              <Input
+                label="E-mail de contato"
+                name="emailContato"
+                type="email"
+                value={form.emailContato}
+                onChange={(e) => set('emailContato', e.target.value)}
+              />
+            </div>
+          </CardContent>
         </Card>
 
         <Card>
-          <h2 className="section-subtitle">Endereço</h2>
-          <div className="form-grid">
-            <Input
-              label="Logradouro"
-              name="logradouro"
-              value={form.logradouro}
-              onChange={(e) => set('logradouro', e.target.value)}
-            />
-            <Input
-              label="Número"
-              name="numero"
-              value={form.numero}
-              onChange={(e) => set('numero', e.target.value)}
-            />
-            <Input
-              label="Complemento"
-              name="complemento"
-              value={form.complemento}
-              onChange={(e) => set('complemento', e.target.value)}
-            />
-            <Input
-              label="Bairro"
-              name="bairro"
-              value={form.bairro}
-              onChange={(e) => set('bairro', e.target.value)}
-            />
-            <Input
-              label="Cidade"
-              name="cidade"
-              value={form.cidade}
-              onChange={(e) => set('cidade', e.target.value)}
-            />
-            <Input
-              label="UF"
-              name="uf"
-              value={form.uf}
-              onChange={(e) => set('uf', e.target.value.toUpperCase().slice(0, 2))}
-              maxLength={2}
-              placeholder="SP"
-            />
-            <Input
-              label="CEP"
-              name="cep"
-              value={form.cep}
-              onChange={(e) => set('cep', maskCep(e.target.value))}
-              placeholder="00000-000"
-              inputMode="numeric"
-              maxLength={9}
-            />
-          </div>
-          <div className="toolbar" style={{ marginTop: '1rem' }}>
-            <div style={{ flex: 1 }} />
-            <Button type="submit" disabled={busy}>
-              {busy ? 'Salvando…' : 'Salvar'}
-            </Button>
-          </div>
+          <CardHeader>
+            <CardTitle>Endereço</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-x-4 sm:grid-cols-[1fr_8rem]">
+              <Input
+                label="Logradouro"
+                name="logradouro"
+                value={form.logradouro}
+                onChange={(e) => set('logradouro', e.target.value)}
+              />
+              <Input
+                label="Número"
+                name="numero"
+                value={form.numero}
+                onChange={(e) => set('numero', e.target.value)}
+              />
+            </div>
+            <div className="grid gap-x-4 sm:grid-cols-2">
+              <Input
+                label="Complemento"
+                name="complemento"
+                value={form.complemento}
+                onChange={(e) => set('complemento', e.target.value)}
+              />
+              <Input
+                label="Bairro"
+                name="bairro"
+                value={form.bairro}
+                onChange={(e) => set('bairro', e.target.value)}
+              />
+            </div>
+            <div className="grid gap-x-4 sm:grid-cols-[1fr_6rem_9rem]">
+              <Input
+                label="Cidade"
+                name="cidade"
+                value={form.cidade}
+                onChange={(e) => set('cidade', e.target.value)}
+              />
+              <Input
+                label="UF"
+                name="uf"
+                value={form.uf}
+                onChange={(e) => set('uf', e.target.value.toUpperCase().slice(0, 2))}
+                maxLength={2}
+                placeholder="SP"
+              />
+              <Input
+                label="CEP"
+                name="cep"
+                value={form.cep}
+                onChange={(e) => set('cep', maskCep(e.target.value))}
+                placeholder="00000-000"
+                inputMode="numeric"
+                maxLength={9}
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button type="submit" disabled={busy}>
+                {busy ? 'Salvando…' : 'Salvar'}
+              </Button>
+            </div>
+          </CardContent>
         </Card>
       </form>
     </div>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { CalendarDays, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { apiGet, apiPost, apiPut, ApiError } from '../api/client'
 import {
   STATUS_LABEL,
@@ -8,23 +9,37 @@ import {
   type Page,
   type Patient,
 } from '../api/types'
+import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
+import { DetailGrid } from '../components/ui/DetailGrid'
 import { Input, Select } from '../components/ui/Input'
+import { Loading } from '../components/ui/LoadingState'
 import { Modal } from '../components/ui/Modal'
+import { PageHeader } from '../components/ui/PageHeader'
+import { cn } from '../lib/utils'
 import { fmtMoney, fmtTime } from '../utils/format'
 
 type View = 'month' | 'week' | 'day'
+type Tone = 'success' | 'warning' | 'danger' | 'accent'
 
 const HOURS = Array.from({ length: 11 }, (_, i) => i + 8) // 8h–18h
 const MONTH_FMT = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' })
 const DAY_FMT = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'short' })
 const FULL_FMT = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' })
+const WEEKDAY_FMT = new Intl.DateTimeFormat('pt-BR', { weekday: 'short' })
 
-const TONE_CLASS: Record<string, string> = {
-  success: 'cal-bg-success',
-  warning: 'cal-bg-warning',
-  danger: 'cal-bg-danger',
-  accent: 'cal-bg-accent',
+const TONE_BG: Record<Tone, string> = {
+  accent: 'bg-accent text-accent-foreground',
+  success: 'bg-success text-success-foreground',
+  warning: 'bg-warning text-warning-foreground',
+  danger: 'bg-destructive/10 text-destructive',
+}
+
+const TONE_BORDER: Record<Tone, string> = {
+  accent: 'border-l-accent-foreground/60',
+  success: 'border-l-success-foreground/60',
+  warning: 'border-l-warning-foreground/60',
+  danger: 'border-l-destructive',
 }
 
 function iso(d: Date): string {
@@ -85,6 +100,8 @@ const ACTION_LABEL: Partial<Record<AppointmentStatus, string>> = {
   cancelled: 'Cancelar',
 }
 
+const VIEW_LABEL: Record<View, string> = { month: 'Mês', week: 'Semana', day: 'Dia' }
+
 export function AgendaPage() {
   const [view, setView] = useState<View>('week')
   const [cursor, setCursor] = useState(() => new Date())
@@ -134,8 +151,16 @@ export function AgendaPage() {
         ? `${DAY_FMT.format(startOfWeek(cursor))} – ${DAY_FMT.format(addDays(startOfWeek(cursor), 6))}`
         : FULL_FMT.format(cursor)
 
+  const weekDays = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(cursor), i)),
+    [cursor],
+  )
+
   function chipClass(a: Appointment) {
-    return `cal-chip ${TONE_CLASS[STATUS_LABEL[a.status].tone]}`
+    return cn(
+      'block w-full cursor-pointer truncate rounded px-1.5 py-0.5 text-left text-[11px] font-medium leading-tight',
+      TONE_BG[STATUS_LABEL[a.status].tone],
+    )
   }
 
   function chipText(a: Appointment) {
@@ -144,37 +169,49 @@ export function AgendaPage() {
 
   return (
     <div>
-      <h1 className="section-title">Agenda</h1>
+      <PageHeader title="Agenda">
+        <div className="flex items-center rounded-lg border bg-card p-0.5">
+          {(['month', 'week', 'day'] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={cn(
+                'rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors',
+                view === v && 'bg-accent text-accent-foreground',
+              )}
+            >
+              {VIEW_LABEL[v]}
+            </button>
+          ))}
+        </div>
+        <Button onClick={() => setCreating(true)}>
+          <Plus />
+          Nova sessão
+        </Button>
+      </PageHeader>
 
-      <div className="view-toggle">
-        {(['month', 'week', 'day'] as const).map((v) => (
-          <Button
-            key={v}
-            variant={view === v ? 'primary' : 'secondary'}
-            small
-            onClick={() => setView(v)}
-          >
-            {{ month: 'Mês', week: 'Semana', day: 'Dia' }[v]}
-          </Button>
-        ))}
-        <div style={{ flex: 1 }} />
-        <Button small onClick={() => setCreating(true)}>Nova sessão</Button>
+      <div className="mb-4 flex items-center gap-2">
+        <Button variant="secondary" size="icon" className="h-8 w-8" onClick={() => shift(-1)} aria-label="Anterior">
+          <ChevronLeft />
+        </Button>
+        <span className="min-w-44 flex-1 text-center text-sm font-medium capitalize">{title}</span>
+        <Button variant="secondary" size="icon" className="h-8 w-8" onClick={() => shift(1)} aria-label="Próximo">
+          <ChevronRight />
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => setCursor(new Date())}>
+          Hoje
+        </Button>
       </div>
 
-      <div className="cal-nav">
-        <Button variant="secondary" small onClick={() => shift(-1)}>←</Button>
-        <span className="cal-title">{title}</span>
-        <Button variant="secondary" small onClick={() => shift(1)}>→</Button>
-        <Button variant="secondary" small onClick={() => setCursor(new Date())}>Hoje</Button>
-      </div>
-
-      {error && <div className="alert-error">{error}</div>}
-      {loading && <div className="loading-state">Carregando…</div>}
+      {error && <Alert className="mb-4">{error}</Alert>}
+      {loading && <Loading />}
 
       {!loading && view === 'month' && (
-        <div className="cal-month">
+        <div className="grid grid-cols-7 gap-1">
           {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((d) => (
-            <div key={d} className="cal-month-header">{d}</div>
+            <div key={d} className="py-1 text-center text-xs font-medium text-muted-foreground">
+              {d}
+            </div>
           ))}
           {Array.from({ length: 42 }, (_, i) => {
             const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1)
@@ -182,29 +219,39 @@ export function AgendaPage() {
             const key = iso(day)
             const list = byDay.get(key) ?? []
             const outside = day.getMonth() !== cursor.getMonth()
+            const today = key === iso(new Date())
             return (
               <div
                 key={key}
-                className={`cal-cell${key === iso(new Date()) ? ' today' : ''}${outside ? ' outside' : ''}`}
                 onClick={() => {
                   setCursor(day)
                   setView('day')
                 }}
+                className={cn(
+                  'min-h-20 cursor-pointer rounded-lg border bg-card p-1.5 text-xs transition-colors hover:border-accent-foreground/30',
+                  today && 'border-primary bg-accent/40',
+                  outside && 'opacity-40',
+                )}
               >
-                <div className="cal-cell-num">{day.getDate()}</div>
-                {list.slice(0, 2).map((a) => (
-                  <div
-                    key={a.id}
-                    className={chipClass(a)}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSelected(a)
-                    }}
-                  >
-                    {chipText(a)}
-                  </div>
-                ))}
-                {list.length > 2 && <div className="cal-chip-more">+{list.length - 2}</div>}
+                <div className={cn('mb-1 font-medium', today && 'text-primary')}>{day.getDate()}</div>
+                <div className="space-y-0.5">
+                  {list.slice(0, 2).map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      className={chipClass(a)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelected(a)
+                      }}
+                    >
+                      {chipText(a)}
+                    </button>
+                  ))}
+                  {list.length > 2 && (
+                    <div className="px-1 text-[10px] text-muted-foreground">+{list.length - 2}</div>
+                  )}
+                </div>
               </div>
             )
           })}
@@ -212,45 +259,55 @@ export function AgendaPage() {
       )}
 
       {!loading && view === 'week' && (
-        <div className="cal-week">
-          <div />
-          {Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(cursor), i)).map((d) => (
-            <div key={iso(d)} className="cal-month-header">
-              {d.getDate()}
-              <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                {DAY_FMT.format(d).split(' ')[1]}
-              </div>
-            </div>
-          ))}
-          {HOURS.map((hr) => (
-            <HourRow
-              key={hr}
-              hr={hr}
-              days={Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(cursor), i))}
-              byDay={byDay}
-              chipClass={chipClass}
-              chipText={chipText}
-              onSelect={setSelected}
-            />
-          ))}
+        <div className="overflow-x-auto rounded-xl border bg-card">
+          <div className="grid min-w-[640px] grid-cols-[3rem_repeat(7,minmax(0,1fr))]">
+            <div className="border-b" />
+            {weekDays.map((d) => {
+              const today = iso(d) === iso(new Date())
+              return (
+                <div
+                  key={iso(d)}
+                  className={cn(
+                    'border-b border-l py-2 text-center text-sm font-medium',
+                    today && 'bg-accent/50 text-primary',
+                  )}
+                >
+                  {d.getDate()}
+                  <div className="text-[11px] font-normal capitalize text-muted-foreground">
+                    {WEEKDAY_FMT.format(d).replace('.', '')}
+                  </div>
+                </div>
+              )
+            })}
+            {HOURS.map((hr) => (
+              <HourRow
+                key={hr}
+                hr={hr}
+                days={weekDays}
+                byDay={byDay}
+                chipClass={chipClass}
+                chipText={chipText}
+                onSelect={setSelected}
+              />
+            ))}
+          </div>
         </div>
       )}
 
       {!loading && view === 'day' && (
-        <div className="cal-day">
+        <div className="rounded-xl border bg-card">
           {HOURS.map((hr) => {
             const list = (byDay.get(iso(cursor)) ?? []).filter(
               (a) => new Date(a.startsAt).getHours() === hr,
             )
-            return (
-              <DayRow
-                key={hr}
-                hr={hr}
-                list={list}
-                onSelect={setSelected}
-              />
-            )
+            return <DayRow key={hr} hr={hr} list={list} onSelect={setSelected} />
           })}
+          {(byDay.get(iso(cursor)) ?? []).length === 0 && (
+            <div className="flex items-center gap-2 px-4 py-6 text-sm text-muted-foreground">
+              <CalendarDays className="size-4" />
+              Nenhuma sessão neste dia.
+            </div>
+          )}
         </div>
       )}
 
@@ -292,22 +349,23 @@ function HourRow({
 }) {
   return (
     <>
-      <div className="cal-hour-label">{hr}:00</div>
+      <div className="border-t px-1 pt-1 text-right text-[11px] text-muted-foreground">{hr}:00</div>
       {days.map((d) => {
         const match = (byDay.get(iso(d)) ?? []).filter(
           (a) => new Date(a.startsAt).getHours() === hr,
         )
         return (
-          <div key={iso(d)} className="cal-slot">
+          <div key={iso(d)} className="min-h-10 space-y-0.5 border-l border-t p-0.5">
             {match.map((a) => (
-              <div
+              <button
                 key={a.id}
+                type="button"
                 className={chipClass(a)}
                 title={a.patientNome}
                 onClick={() => onSelect(a)}
               >
                 {chipText(a)}
-              </div>
+              </button>
             ))}
           </div>
         )
@@ -326,23 +384,28 @@ function DayRow({
   onSelect: (a: Appointment) => void
 }) {
   return (
-    <>
-      <div className="cal-hour-label">{hr}:00</div>
-      <div className="cal-slot" style={{ minHeight: 48, padding: 4 }}>
+    <div className="grid grid-cols-[3rem_1fr]">
+      <div className="border-t px-1 pt-2 text-right text-[11px] text-muted-foreground">{hr}:00</div>
+      <div className="min-h-12 space-y-1.5 border-l border-t p-1.5">
         {list.map((a) => (
-          <div
+          <button
             key={a.id}
-            className={`cal-event ${TONE_CLASS[STATUS_LABEL[a.status].tone]}`}
+            type="button"
             onClick={() => onSelect(a)}
+            className={cn(
+              'block w-full cursor-pointer rounded-md border-l-4 px-3 py-2 text-left transition-shadow hover:shadow-sm',
+              TONE_BG[STATUS_LABEL[a.status].tone],
+              TONE_BORDER[STATUS_LABEL[a.status].tone],
+            )}
           >
-            <div className="cal-event-title">{a.patientNome ?? '—'}</div>
-            <div className="cal-event-sub">
+            <div className="text-sm font-medium text-foreground">{a.patientNome ?? '—'}</div>
+            <div className="text-xs opacity-80">
               {fmtTime(a.startsAt)} – {STATUS_LABEL[a.status].label} · {a.duracao}min
             </div>
-          </div>
+          </button>
         ))}
       </div>
-    </>
+    </div>
   )
 }
 
@@ -383,34 +446,40 @@ function SessionModal({
 
   return (
     <Modal open title={appt.patientNome ?? 'Sessão'} onClose={onClose}>
-      {error && <div className="alert-error">{error}</div>}
-      <dl className="detail-grid" style={{ marginBottom: '1rem' }}>
-        <div><dt>Data/hora</dt><dd>{new Date(appt.startsAt).toLocaleString('pt-BR')}</dd></div>
-        <div><dt>Duração</dt><dd>{appt.duracao} min</dd></div>
-        <div><dt>Valor</dt><dd>{fmtMoney(appt.valor)}</dd></div>
-        <div><dt>Status</dt><dd>{STATUS_LABEL[appt.status].label}</dd></div>
-        <div><dt>Faturada</dt><dd>{appt.faturada ? 'Sim' : 'Não'}</dd></div>
-        <div><dt>Sala</dt><dd>{appt.salaReuniao ?? '—'}</dd></div>
-      </dl>
+      {error && <Alert className="mb-4">{error}</Alert>}
+      <DetailGrid
+        className="mb-5"
+        items={[
+          { label: 'Data/hora', value: new Date(appt.startsAt).toLocaleString('pt-BR') },
+          { label: 'Duração', value: `${appt.duracao} min` },
+          { label: 'Valor', value: fmtMoney(appt.valor) },
+          { label: 'Status', value: STATUS_LABEL[appt.status].label },
+          { label: 'Faturada', value: appt.faturada ? 'Sim' : 'Não' },
+          { label: 'Sala', value: appt.salaReuniao ?? '—' },
+        ]}
+      />
 
       {allowed.length > 0 && (
-        <div className="button-group">
-          {allowed.filter((s) => ACTION_LABEL[s]).map((s) => (
-            <Button
-              key={s}
-              small
-              variant={s === 'cancelled' ? 'secondary' : 'primary'}
-              disabled={busy}
-              onClick={() => act({ status: s })}
-            >
-              {ACTION_LABEL[s]}
-            </Button>
-          ))}
+        <div className="mb-4 flex flex-wrap gap-2">
+          {allowed
+            .filter((s) => ACTION_LABEL[s])
+            .map((s) => (
+              <Button
+                key={s}
+                size="sm"
+                variant={s === 'cancelled' ? 'secondary' : 'primary'}
+                disabled={busy}
+                onClick={() => act({ status: s })}
+              >
+                {ACTION_LABEL[s]}
+              </Button>
+            ))}
         </div>
       )}
 
       {allowed.includes('rescheduled') && (
         <form
+          className="mb-4"
           onSubmit={(e: FormEvent) => {
             e.preventDefault()
             if (newStart) act({ startsAt: new Date(newStart).toISOString(), status: 'rescheduled' })
@@ -424,17 +493,15 @@ function SessionModal({
             onChange={(e) => setNewStart(e.target.value)}
             required
           />
-          <Button small type="submit" variant="secondary" disabled={busy || !newStart}>
+          <Button size="sm" type="submit" variant="secondary" disabled={busy || !newStart}>
             Remarcar
           </Button>
         </form>
       )}
 
-      <div className="button-group" style={{ marginTop: '1rem' }}>
-        <Button small variant="secondary" onClick={() => navigate(`/agenda/${appt.id}`)}>
-          Abrir atendimento
-        </Button>
-      </div>
+      <Button size="sm" variant="secondary" onClick={() => navigate(`/agenda/${appt.id}`)}>
+        Abrir atendimento
+      </Button>
     </Modal>
   )
 }
@@ -490,7 +557,7 @@ function NewSessionModal({
 
   return (
     <Modal open={open} title="Nova sessão" onClose={onClose}>
-      {error && <div className="alert-error">{error}</div>}
+      {error && <Alert className="mb-4">{error}</Alert>}
       <form onSubmit={onSubmit}>
         <Select
           label="Paciente"
@@ -499,14 +566,18 @@ function NewSessionModal({
           onChange={(e) => setPatientId(e.target.value)}
           options={patients.map((p) => ({ value: p.id, label: p.nome }))}
         />
-        <Input label="Data" name="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-        <Input label="Hora" name="time" type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
+        <div className="grid grid-cols-2 gap-x-4">
+          <Input label="Data" name="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+          <Input label="Hora" name="time" type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
+        </div>
         <Input label="Duração (min)" name="duracao" type="number" min={10} max={240} value={duracao} onChange={(e) => setDuracao(e.target.value)} />
-        <div className="button-group">
+        <div className="flex flex-wrap gap-2">
           <Button type="submit" disabled={busy || !patientId}>
             {busy ? 'Criando…' : 'Criar sessão'}
           </Button>
-          <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancelar
+          </Button>
         </div>
       </form>
     </Modal>

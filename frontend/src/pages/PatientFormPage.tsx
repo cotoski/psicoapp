@@ -2,9 +2,13 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { apiGet, apiPost, apiPut, ApiError } from '../api/client'
 import { WEEK_DAYS, type Frequencia, type Patient, type WeekDay } from '../api/types'
-import { Card } from '../components/ui/Card'
+import { Alert } from '../components/ui/Alert'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input, Select, Textarea } from '../components/ui/Input'
+import { Loading } from '../components/ui/LoadingState'
+import { PageHeader } from '../components/ui/PageHeader'
+import { Pill } from '../components/ui/Pill'
 import { maskCpf } from '../utils/format'
 
 interface FormState {
@@ -137,95 +141,115 @@ export function PatientFormPage() {
     }
   }
 
-  if (loading) return <div className="loading-state">Carregando…</div>
+  if (loading) return <Loading />
 
   const geraAgenda = form.diasSemana.length > 0 && Boolean(form.horario)
-  const agendaIncompleta =
-    !geraAgenda && (form.diasSemana.length > 0 || Boolean(form.horario))
+  const agendaIncompleta = !geraAgenda && (form.diasSemana.length > 0 || Boolean(form.horario))
 
   return (
-    <div style={{ maxWidth: 640 }}>
-      <h1 className="section-title">{editing ? 'Editar paciente' : 'Novo paciente'}</h1>
-      {error && <div className="alert-error">{error}</div>}
+    <div className="max-w-2xl">
+      <PageHeader title={editing ? 'Editar paciente' : 'Novo paciente'} />
+      {error && <Alert className="mb-4">{error}</Alert>}
 
-      <form onSubmit={onSubmit}>
+      <form onSubmit={onSubmit} className="space-y-4">
         <Card>
-          <h2 className="section-subtitle">Dados básicos</h2>
-          <Input label="Nome *" name="nome" value={form.nome} onChange={(e) => set('nome', e.target.value)} required />
-          <Input label="CPF" name="cpf" placeholder="000.000.000-00" inputMode="numeric" maxLength={14} value={form.cpf} onChange={(e) => set('cpf', maskCpf(e.target.value))} />
-          <Input label="Telefone" name="telefone" value={form.telefone} onChange={(e) => set('telefone', e.target.value)} />
-          <Input label="E-mail" name="email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
-          <Input label="Data de nascimento" name="dataNascimento" type="date" value={form.dataNascimento} onChange={(e) => set('dataNascimento', e.target.value)} />
-          <Textarea label="Anamnese" name="anamnese" value={form.anamnese} onChange={(e) => set('anamnese', e.target.value)} />
-        </Card>
-
-        <Card>
-          <h2 className="section-subtitle">Agenda recorrente</h2>
-          <div className="form-group">
-            <label>Dias da semana</label>
-            <div>
-              {WEEK_DAYS.map((d) => (
-                <button
-                  key={d.value}
-                  type="button"
-                  className={`pill${form.diasSemana.includes(d.value) ? ' active' : ''}`}
-                  onClick={() => toggleDay(d.value)}
-                >
-                  {d.label}
-                </button>
-              ))}
+          <CardHeader>
+            <CardTitle>Dados básicos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Input label="Nome *" name="nome" value={form.nome} onChange={(e) => set('nome', e.target.value)} required />
+            <div className="grid gap-x-4 sm:grid-cols-2">
+              <Input label="CPF" name="cpf" placeholder="000.000.000-00" inputMode="numeric" maxLength={14} value={form.cpf} onChange={(e) => set('cpf', maskCpf(e.target.value))} />
+              <Input label="Telefone" name="telefone" value={form.telefone} onChange={(e) => set('telefone', e.target.value)} />
             </div>
-          </div>
-          <Input label="Horário" name="horario" type="time" value={form.horario} onChange={(e) => set('horario', e.target.value)} />
-          <Select
-            label="Frequência"
-            name="frequencia"
-            value={form.frequenciaRecorrencia}
-            onChange={(e) => set('frequenciaRecorrencia', e.target.value as Frequencia)}
-            options={[
-              { value: 'semanal', label: 'Semanal' },
-              { value: 'quinzenal', label: 'Quinzenal' },
-              { value: 'mensal', label: 'Mensal' },
-            ]}
-          />
-          <Input label="Ciclo de reajuste (meses)" name="mesesCiclo" type="number" min={1} max={36} value={form.mesesCiclo} onChange={(e) => set('mesesCiclo', e.target.value)} />
-          <Input label="Data do próximo reajuste" name="dataReajuste" type="date" value={form.dataReajuste} onChange={(e) => set('dataReajuste', e.target.value)} />
-          <Input label="Sala / link de reunião" name="salaReuniao" value={form.salaReuniao} onChange={(e) => set('salaReuniao', e.target.value)} />
-          {agendaIncompleta && (
-            <p className="alert-error">
-              Para gerar os agendamentos automaticamente, selecione os dias da
-              semana <strong>e</strong> o horário.
-            </p>
-          )}
-          {!editing && geraAgenda && (
-            <p className="section-subtitle">
-              Ao salvar, a agenda será gerada até a data de reajuste.
-            </p>
-          )}
-          {editing && geraAgenda && (
-            <p className="section-subtitle">
-              Alterar dias/horário/frequência regenera as sessões futuras ainda não realizadas.
-            </p>
-          )}
+            <div className="grid gap-x-4 sm:grid-cols-2">
+              <Input label="E-mail" name="email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
+              <Input label="Data de nascimento" name="dataNascimento" type="date" value={form.dataNascimento} onChange={(e) => set('dataNascimento', e.target.value)} />
+            </div>
+            <Textarea label="Anamnese" name="anamnese" value={form.anamnese} onChange={(e) => set('anamnese', e.target.value)} />
+          </CardContent>
         </Card>
 
         <Card>
-          <h2 className="section-subtitle">Faturamento</h2>
-          <Input label="Valor por sessão (R$)" name="valor" type="number" min={0} step="0.01" value={form.valor} onChange={(e) => set('valor', e.target.value)} />
-          <Select
-            label="Tipo de faturamento"
-            name="tipoFaturamento"
-            value={form.tipoFaturamento}
-            onChange={(e) => set('tipoFaturamento', e.target.value as 'imediato' | 'pacote')}
-            options={[
-              { value: 'imediato', label: 'Imediato (por sessão)' },
-              { value: 'pacote', label: 'Pacote (nota agrupada)' },
-            ]}
-          />
-          <Input label="Sessões por nota (vazio = automático)" name="qtdSessoesNota" type="number" min={1} max={200} value={form.qtdSessoesNota} onChange={(e) => set('qtdSessoesNota', e.target.value)} />
+          <CardHeader>
+            <CardTitle>Agenda recorrente</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-5">
+              <span className="mb-1.5 block text-sm font-medium">Dias da semana</span>
+              <div className="flex flex-wrap gap-1.5">
+                {WEEK_DAYS.map((d) => (
+                  <Pill
+                    key={d.value}
+                    active={form.diasSemana.includes(d.value)}
+                    onClick={() => toggleDay(d.value)}
+                  >
+                    {d.label}
+                  </Pill>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-x-4 sm:grid-cols-2">
+              <Input label="Horário" name="horario" type="time" value={form.horario} onChange={(e) => set('horario', e.target.value)} />
+              <Select
+                label="Frequência"
+                name="frequencia"
+                value={form.frequenciaRecorrencia}
+                onChange={(e) => set('frequenciaRecorrencia', e.target.value as Frequencia)}
+                options={[
+                  { value: 'semanal', label: 'Semanal' },
+                  { value: 'quinzenal', label: 'Quinzenal' },
+                  { value: 'mensal', label: 'Mensal' },
+                ]}
+              />
+            </div>
+            <div className="grid gap-x-4 sm:grid-cols-2">
+              <Input label="Ciclo de reajuste (meses)" name="mesesCiclo" type="number" min={1} max={36} value={form.mesesCiclo} onChange={(e) => set('mesesCiclo', e.target.value)} />
+              <Input label="Data do próximo reajuste" name="dataReajuste" type="date" value={form.dataReajuste} onChange={(e) => set('dataReajuste', e.target.value)} />
+            </div>
+            <Input label="Sala / link de reunião" name="salaReuniao" value={form.salaReuniao} onChange={(e) => set('salaReuniao', e.target.value)} />
+            {agendaIncompleta && (
+              <Alert tone="warning">
+                Para gerar os agendamentos automaticamente, selecione os dias da
+                semana <strong>e</strong> o horário.
+              </Alert>
+            )}
+            {!editing && geraAgenda && (
+              <p className="text-sm text-muted-foreground">
+                Ao salvar, a agenda será gerada até a data de reajuste.
+              </p>
+            )}
+            {editing && geraAgenda && (
+              <p className="text-sm text-muted-foreground">
+                Alterar dias/horário/frequência regenera as sessões futuras ainda não realizadas.
+              </p>
+            )}
+          </CardContent>
         </Card>
 
-        <div className="button-group">
+        <Card>
+          <CardHeader>
+            <CardTitle>Faturamento</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-x-4 sm:grid-cols-2">
+              <Input label="Valor por sessão (R$)" name="valor" type="number" min={0} step="0.01" value={form.valor} onChange={(e) => set('valor', e.target.value)} />
+              <Select
+                label="Tipo de faturamento"
+                name="tipoFaturamento"
+                value={form.tipoFaturamento}
+                onChange={(e) => set('tipoFaturamento', e.target.value as 'imediato' | 'pacote')}
+                options={[
+                  { value: 'imediato', label: 'Imediato (por sessão)' },
+                  { value: 'pacote', label: 'Pacote (nota agrupada)' },
+                ]}
+              />
+            </div>
+            <Input label="Sessões por nota (vazio = automático)" name="qtdSessoesNota" type="number" min={1} max={200} value={form.qtdSessoesNota} onChange={(e) => set('qtdSessoesNota', e.target.value)} />
+          </CardContent>
+        </Card>
+
+        <div className="flex flex-wrap gap-2">
           <Button type="submit" disabled={busy}>
             {busy ? 'Salvando…' : editing ? 'Salvar alterações' : 'Criar paciente'}
           </Button>

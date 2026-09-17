@@ -1,9 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { apiGet, apiPost, apiPut, ApiError } from '../api/client'
 import { FatorRCalculator } from '../components/tributary/FatorRCalculator'
+import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
-import { Card } from '../components/ui/Card'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Input, Select } from '../components/ui/Input'
+import { Loading } from '../components/ui/LoadingState'
+import { PageHeader } from '../components/ui/PageHeader'
 import { Table, type Column } from '../components/ui/Table'
 import { fmtMoney } from '../utils/format'
 
@@ -117,7 +120,7 @@ export function TaxPage() {
         (Object.entries(res) as [Regime, RegimeResult][]).map(([regime, r]) => ({
           id: regime,
           regime: REGIME_LABEL[regime],
-          linhas: (Object.entries(r).filter(([k]) => k !== 'total') as [string, number][]),
+          linhas: Object.entries(r).filter(([k]) => k !== 'total') as [string, number][],
           total: r.total,
         })),
       )
@@ -132,116 +135,127 @@ export function TaxPage() {
     { header: 'Regime', render: (r) => r.regime },
     {
       header: 'Componentes',
-      render: (r) =>
-        r.linhas.map(([k, v]) => `${k.toUpperCase()} ${fmtMoney(v)}`).join(' · '),
+      render: (r) => r.linhas.map(([k, v]) => `${k.toUpperCase()} ${fmtMoney(v)}`).join(' · '),
     },
     { header: 'Total por sessão', render: (r) => fmtMoney(r.total) },
   ]
 
-  if (loading) return <div className="loading-state">Carregando…</div>
+  if (loading) return <Loading />
 
   return (
-    <div style={{ maxWidth: 720 }}>
-      <h1 className="section-title">Tributos</h1>
-      {error && <div className="alert-error">{error}</div>}
-      {cfgSaved && (
-        <div className="alert-error" style={{ background: 'var(--bg-success)', color: 'var(--text-success)' }}>
-          Configuração salva.
-        </div>
-      )}
+    <div className="max-w-3xl">
+      <PageHeader title="Tributos" />
+      {error && <Alert className="mb-4">{error}</Alert>}
+      {cfgSaved && <Alert tone="success" className="mb-4">Configuração salva.</Alert>}
 
-      <Card>
-        <h2 className="section-subtitle">Configuração do consultório</h2>
-        <form onSubmit={saveConfig}>
-          <Select
-            label="Regime tributário"
-            name="regime"
-            value={cfgForm.regime}
-            onChange={(e) => setCfgForm((f) => ({ ...f, regime: e.target.value }))}
-            options={[
-              { value: '', label: '—' },
-              { value: 'pf', label: 'Pessoa Física' },
-              { value: 'simples', label: 'Simples Nacional' },
-              { value: 'presumido', label: 'Lucro Presumido' },
-            ]}
-          />
-          <Select
-            label="Município (ISS)"
-            name="municipio"
-            value={cfgForm.municipio}
-            onChange={(e) => setCfgForm((f) => ({ ...f, municipio: e.target.value }))}
-            options={MUNICIPIOS}
-          />
-          <Input
-            label="Faturamento anual (R$)"
-            name="fat"
-            type="number" min={0} step="0.01"
-            value={cfgForm.faturamentoAnual}
-            onChange={(e) => setCfgForm((f) => ({ ...f, faturamentoAnual: e.target.value }))}
-          />
-          <Input
-            label="Folha de pagamento anual (R$)"
-            name="folha"
-            type="number" min={0} step="0.01"
-            value={cfgForm.folhaPagamentoAnual}
-            onChange={(e) => setCfgForm((f) => ({ ...f, folhaPagamentoAnual: e.target.value }))}
-          />
-          <Input
-            label="Pró-labore anual (R$)"
-            name="prolabore"
-            type="number" min={0} step="0.01"
-            value={cfgForm.prolaboreAnual}
-            onChange={(e) => setCfgForm((f) => ({ ...f, prolaboreAnual: e.target.value }))}
-          />
-          <Button type="submit" small>Salvar configuração</Button>
-        </form>
-      </Card>
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Configuração do consultório</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={saveConfig}>
+              <div className="grid gap-x-4 sm:grid-cols-2">
+                <Select
+                  label="Regime tributário"
+                  name="regime"
+                  value={cfgForm.regime}
+                  onChange={(e) => setCfgForm((f) => ({ ...f, regime: e.target.value }))}
+                  options={[
+                    { value: '', label: '—' },
+                    { value: 'pf', label: 'Pessoa Física' },
+                    { value: 'simples', label: 'Simples Nacional' },
+                    { value: 'presumido', label: 'Lucro Presumido' },
+                  ]}
+                />
+                <Select
+                  label="Município (ISS)"
+                  name="municipio"
+                  value={cfgForm.municipio}
+                  onChange={(e) => setCfgForm((f) => ({ ...f, municipio: e.target.value }))}
+                  options={MUNICIPIOS}
+                />
+              </div>
+              <Input
+                label="Faturamento anual (R$)"
+                name="fat"
+                type="number" min={0} step="0.01"
+                value={cfgForm.faturamentoAnual}
+                onChange={(e) => setCfgForm((f) => ({ ...f, faturamentoAnual: e.target.value }))}
+              />
+              <div className="grid gap-x-4 sm:grid-cols-2">
+                <Input
+                  label="Folha de pagamento anual (R$)"
+                  name="folha"
+                  type="number" min={0} step="0.01"
+                  value={cfgForm.folhaPagamentoAnual}
+                  onChange={(e) => setCfgForm((f) => ({ ...f, folhaPagamentoAnual: e.target.value }))}
+                />
+                <Input
+                  label="Pró-labore anual (R$)"
+                  name="prolabore"
+                  type="number" min={0} step="0.01"
+                  value={cfgForm.prolaboreAnual}
+                  onChange={(e) => setCfgForm((f) => ({ ...f, prolaboreAnual: e.target.value }))}
+                />
+              </div>
+              <Button type="submit" size="sm">Salvar configuração</Button>
+            </form>
+          </CardContent>
+        </Card>
 
-      <FatorRCalculator
-        defaultFaturamento={config?.faturamentoAnual}
-        defaultFolha={config?.folhaPagamentoAnual}
-      />
+        <FatorRCalculator
+          defaultFaturamento={config?.faturamentoAnual}
+          defaultFolha={config?.folhaPagamentoAnual}
+        />
 
-      <Card>
-        <h2 className="section-subtitle">Simulador por sessão</h2>
-        <form onSubmit={simulate}>
-          <Input
-            label="Valor da sessão (R$)"
-            name="valor"
-            type="number" min={0} step="0.01"
-            value={simValor}
-            onChange={(e) => setSimValor(e.target.value)}
-            required
-          />
-          <Select
-            label="Município (ISS)"
-            name="simMunicipio"
-            value={simMunicipio}
-            onChange={(e) => setSimMunicipio(e.target.value)}
-            options={MUNICIPIOS}
-          />
-          <Select
-            label="Regime (vazio = comparar os três)"
-            name="simRegime"
-            value={simRegime}
-            onChange={(e) => setSimRegime(e.target.value)}
-            options={[
-              { value: '', label: 'Todos' },
-              { value: 'pf', label: 'Pessoa Física' },
-              { value: 'simples', label: 'Simples Nacional' },
-              { value: 'presumido', label: 'Lucro Presumido' },
-            ]}
-          />
-          <Button type="submit" small disabled={simBusy}>
-            {simBusy ? 'Simulando…' : 'Simular'}
-          </Button>
-        </form>
-        {simRows.length > 0 && (
-          <div style={{ marginTop: '1rem' }}>
-            <Table columns={columns} rows={simRows} />
-          </div>
-        )}
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Simulador por sessão</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={simulate}>
+              <div className="grid gap-x-4 sm:grid-cols-3">
+                <Input
+                  label="Valor da sessão (R$)"
+                  name="valor"
+                  type="number" min={0} step="0.01"
+                  value={simValor}
+                  onChange={(e) => setSimValor(e.target.value)}
+                  required
+                />
+                <Select
+                  label="Município (ISS)"
+                  name="simMunicipio"
+                  value={simMunicipio}
+                  onChange={(e) => setSimMunicipio(e.target.value)}
+                  options={MUNICIPIOS}
+                />
+                <Select
+                  label="Regime (vazio = todos)"
+                  name="simRegime"
+                  value={simRegime}
+                  onChange={(e) => setSimRegime(e.target.value)}
+                  options={[
+                    { value: '', label: 'Todos' },
+                    { value: 'pf', label: 'Pessoa Física' },
+                    { value: 'simples', label: 'Simples Nacional' },
+                    { value: 'presumido', label: 'Lucro Presumido' },
+                  ]}
+                />
+              </div>
+              <Button type="submit" size="sm" disabled={simBusy}>
+                {simBusy ? 'Simulando…' : 'Simular'}
+              </Button>
+            </form>
+            {simRows.length > 0 && (
+              <div className="mt-5">
+                <Table columns={columns} rows={simRows} />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

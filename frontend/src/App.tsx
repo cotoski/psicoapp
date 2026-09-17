@@ -15,7 +15,7 @@ import type { ReactNode } from 'react'
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth()
-  if (loading) return <div className="loading-state">Carregando…</div>
+  if (loading) return <div className="p-8 text-sm text-muted-foreground">Carregando…</div>
   if (!user) return <Navigate to="/login" replace />
   return <>{children}</>
 }

@@ -48,7 +48,7 @@ test('fluxo completo: login → paciente → agenda → prontuário → faturar'
   // --- Agenda: sessão gerada aparece hoje ---
   await page.goto('/agenda')
   await page.getByRole('button', { name: 'Dia' }).click()
-  const evento = page.locator('.cal-event', { hasText: paciente })
+  const evento = page.getByRole('button', { name: paciente })
   await expect(evento).toBeVisible()
   await evento.click()
 
@@ -64,14 +64,10 @@ test('fluxo completo: login → paciente → agenda → prontuário → faturar'
 
   // --- Financeiro: faturar a sessão ---
   await page.goto('/financeiro')
-  const grupo = page.locator('.toolbar', { hasText: paciente }).first()
+  const grupo = page.getByTestId('pending-group').filter({ hasText: paciente }).first()
   await expect(grupo).toBeVisible()
   // Marca o checkbox da sessão dentro do grupo do paciente
-  await page
-    .locator('div', { hasText: paciente })
-    .locator('input[type="checkbox"]')
-    .last()
-    .check()
+  await grupo.locator('input[type="checkbox"]').last().check()
   await page.getByRole('button', { name: /Faturar/ }).click()
   await expect(page.getByText(/Nota gerada/)).toBeVisible()
 })

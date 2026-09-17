@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, CalendarClock, CalendarX2, Pencil } from 'lucide-react'
 import { apiGet, apiPost, ApiError } from '../api/client'
 import { STATUS_LABEL, type Appointment, type Page, type Patient } from '../api/types'
+import { Alert } from '../components/ui/Alert'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
-import { Card } from '../components/ui/Card'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
+import { DetailGrid } from '../components/ui/DetailGrid'
+import { Empty, Loading } from '../components/ui/LoadingState'
+import { PageHeader } from '../components/ui/PageHeader'
 import { fmtDate, fmtDateTime, fmtMoney } from '../utils/format'
 
 export function PatientDetailPage() {
@@ -45,32 +50,42 @@ export function PatientDetailPage() {
     }
   }
 
-  if (loading) return <div className="loading-state">Carregando…</div>
-  if (!patient) return <div className="alert-error">{error ?? 'Paciente não encontrado.'}</div>
+  if (loading) return <Loading />
+  if (!patient) return <Alert>{error ?? 'Paciente não encontrado.'}</Alert>
 
   const dias = patient.diasSemana?.join(', ') || '—'
 
   return (
     <div>
-      <h1 className="section-title">{patient.nome}</h1>
-      {error && <div className="alert-error">{error}</div>}
-
-      <div className="toolbar">
-        <Link to={`/pacientes/${patient.id}/editar`}>
-          <Button variant="secondary" small>Editar</Button>
-        </Link>
+      <PageHeader
+        title={
+          <span className="flex items-center gap-3">
+            {patient.nome}
+            <Badge tone={patient.archivedAt ? 'warning' : 'success'}>
+              {patient.archivedAt ? 'Arquivado' : 'Ativo'}
+            </Badge>
+          </span>
+        }
+      >
+        <Button variant="secondary" size="sm" asChild>
+          <Link to={`/pacientes/${patient.id}/editar`}>
+            <Pencil />
+            Editar
+          </Link>
+        </Button>
         <Button
           variant="secondary"
-          small
+          size="sm"
           disabled={busy}
           onClick={() => action(() => apiPost(`/patients/${patient.id}/renovar`))}
         >
+          <CalendarClock />
           Renovar ciclo
         </Button>
         {patient.archivedAt ? (
           <Button
             variant="secondary"
-            small
+            size="sm"
             disabled={busy}
             onClick={() => action(() => apiPost(`/patients/${patient.id}/unarchive`))}
           >
@@ -79,59 +94,93 @@ export function PatientDetailPage() {
         ) : (
           <Button
             variant="secondary"
-            small
+            size="sm"
             disabled={busy}
             onClick={() => action(() => apiPost(`/patients/${patient.id}/archive`))}
           >
+            <CalendarX2 />
             Arquivar
           </Button>
         )}
-        <Button variant="secondary" small onClick={() => navigate('/pacientes')}>
-          ← Voltar
+        <Button variant="ghost" size="sm" onClick={() => navigate('/pacientes')}>
+          <ArrowLeft />
+          Voltar
         </Button>
-      </div>
+      </PageHeader>
 
-      <Card>
-        <dl className="detail-grid">
-          <div><dt>CPF</dt><dd>{patient.cpf ?? '—'}</dd></div>
-          <div><dt>Telefone</dt><dd>{patient.telefone ?? '—'}</dd></div>
-          <div><dt>E-mail</dt><dd>{patient.email ?? '—'}</dd></div>
-          <div><dt>Nascimento</dt><dd>{patient.dataNascimento ? fmtDate(patient.dataNascimento) : '—'}</dd></div>
-          <div><dt>Valor/sessão</dt><dd>{fmtMoney(patient.valor)}</dd></div>
-          <div><dt>Faturamento</dt><dd>{patient.tipoFaturamento} ({patient.qtdSessoesNota}/nota)</dd></div>
-          <div><dt>Dias</dt><dd>{dias}</dd></div>
-          <div><dt>Horário</dt><dd>{patient.horario?.slice(0, 5) ?? '—'}</dd></div>
-          <div><dt>Frequência</dt><dd>{patient.frequenciaRecorrencia}</dd></div>
-          <div><dt>Reajuste</dt><dd>{patient.dataReajuste ? fmtDate(patient.dataReajuste) : '—'}</dd></div>
-          <div><dt>Ciclo</dt><dd>{patient.mesesCiclo} meses</dd></div>
-          <div><dt>Sala/link</dt><dd>{patient.salaReuniao ?? '—'}</dd></div>
-          <div><dt>Status</dt><dd>{patient.archivedAt ? 'Arquivado' : 'Ativo'}</dd></div>
-          <div><dt>Cadastro</dt><dd>{fmtDateTime(patient.createdAt)}</dd></div>
-        </dl>
+      {error && <Alert className="mb-4">{error}</Alert>}
+
+      <Card className="mb-4">
+        <CardContent className="pt-6">
+          <DetailGrid
+            items={[
+              { label: 'CPF', value: patient.cpf ?? '—' },
+              { label: 'Telefone', value: patient.telefone ?? '—' },
+              { label: 'E-mail', value: patient.email ?? '—' },
+              {
+                label: 'Nascimento',
+                value: patient.dataNascimento ? fmtDate(patient.dataNascimento) : '—',
+              },
+              { label: 'Valor/sessão', value: fmtMoney(patient.valor) },
+              {
+                label: 'Faturamento',
+                value: `${patient.tipoFaturamento} (${patient.qtdSessoesNota}/nota)`,
+              },
+              { label: 'Dias', value: dias },
+              { label: 'Horário', value: patient.horario?.slice(0, 5) ?? '—' },
+              { label: 'Frequência', value: patient.frequenciaRecorrencia },
+              {
+                label: 'Reajuste',
+                value: patient.dataReajuste ? fmtDate(patient.dataReajuste) : '—',
+              },
+              { label: 'Ciclo', value: `${patient.mesesCiclo} meses` },
+              { label: 'Sala/link', value: patient.salaReuniao ?? '—' },
+              { label: 'Cadastro', value: fmtDateTime(patient.createdAt) },
+            ]}
+          />
+        </CardContent>
       </Card>
 
       {patient.anamnese && (
-        <Card>
-          <h2 className="section-subtitle">Anamnese</h2>
-          <p style={{ fontSize: 14, whiteSpace: 'pre-wrap' }}>{patient.anamnese}</p>
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle>Anamnese</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="whitespace-pre-wrap text-sm">{patient.anamnese}</p>
+          </CardContent>
         </Card>
       )}
 
       <Card>
-        <h2 className="section-subtitle">Histórico de sessões</h2>
-        {sessions.length === 0 ? (
-          <p className="empty-state">Nenhuma sessão registrada.</p>
-        ) : (
-          sessions.map((s) => (
-            <div key={s.id} className="session-card" onClick={() => navigate(`/agenda/${s.id}`)}>
-              <div className="session-time">
-                {fmtDateTime(s.startsAt)} · {s.duracao} min · {fmtMoney(s.valor)}
-                {s.faturada ? ' · faturada' : ''}
-              </div>
-              <Badge tone={STATUS_LABEL[s.status].tone}>{STATUS_LABEL[s.status].label}</Badge>
+        <CardHeader className="flex-row items-center justify-between">
+          <CardTitle>Histórico de sessões</CardTitle>
+          {sessions.length > 0 && <Badge tone="accent">{sessions.length}</Badge>}
+        </CardHeader>
+        <CardContent>
+          {sessions.length === 0 ? (
+            <Empty icon={<CalendarX2 />}>Nenhuma sessão registrada.</Empty>
+          ) : (
+            <div className="-m-2 divide-y">
+              {sessions.map((s) => (
+                <div
+                  key={s.id}
+                  onClick={() => navigate(`/agenda/${s.id}`)}
+                  className="flex cursor-pointer items-center gap-4 rounded-lg p-3 transition-colors hover:bg-muted/50"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium">{fmtDateTime(s.startsAt)}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {s.duracao} min · {fmtMoney(s.valor)}
+                      {s.faturada ? ' · faturada' : ''}
+                    </div>
+                  </div>
+                  <Badge tone={STATUS_LABEL[s.status].tone}>{STATUS_LABEL[s.status].label}</Badge>
+                </div>
+              ))}
             </div>
-          ))
-        )}
+          )}
+        </CardContent>
       </Card>
     </div>
   )

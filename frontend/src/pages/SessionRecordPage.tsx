@@ -1,11 +1,16 @@
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, ShieldAlert, X } from 'lucide-react'
 import { apiGet, apiPut, ApiError } from '../api/client'
 import { STATUS_LABEL, type Appointment } from '../api/types'
+import { Alert } from '../components/ui/Alert'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
-import { Card } from '../components/ui/Card'
-import { Input, Textarea } from '../components/ui/Input'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
+import { DetailGrid } from '../components/ui/DetailGrid'
+import { fieldClass, Input, Textarea } from '../components/ui/Input'
+import { Loading } from '../components/ui/LoadingState'
+import { cn } from '../lib/utils'
 import { fmtDateTime, fmtMoney } from '../utils/format'
 
 interface SessionRecord {
@@ -40,12 +45,10 @@ export function SessionRecordPage() {
   useEffect(() => {
     if (!id) return
     // Prontuário inexistente é 404 (RECORD_NOT_FOUND) — não é erro de página.
-    const fetchRecord = apiGet<SessionRecord>(`/appointments/${id}/record`).catch(
-      (err) => {
-        if (err instanceof ApiError && err.code === 'RECORD_NOT_FOUND') return null
-        throw err
-      },
-    )
+    const fetchRecord = apiGet<SessionRecord>(`/appointments/${id}/record`).catch((err) => {
+      if (err instanceof ApiError && err.code === 'RECORD_NOT_FOUND') return null
+      throw err
+    })
     Promise.all([apiGet<Appointment>(`/appointments/${id}`), fetchRecord])
       .then(([a, r]) => {
         setAppt(a)
@@ -99,101 +102,124 @@ export function SessionRecordPage() {
     }
   }
 
-  if (loading) return <div className="loading-state">Carregando…</div>
-  if (!appt) return <div className="alert-error">{error ?? 'Atendimento não encontrado.'}</div>
+  if (loading) return <Loading />
+  if (!appt) return <Alert>{error ?? 'Atendimento não encontrado.'}</Alert>
 
   const locked = record?.legalHold === true
 
   return (
-    <div style={{ maxWidth: 720 }}>
-      <div className="toolbar">
-        <Button variant="secondary" small onClick={() => navigate(-1)}>← Voltar</Button>
-        <h1 className="section-title" style={{ margin: 0 }}>{appt.patientNome ?? 'Atendimento'}</h1>
+    <div className="max-w-3xl">
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+          <ArrowLeft />
+          Voltar
+        </Button>
+        <h1 className="text-xl font-semibold tracking-tight">{appt.patientNome ?? 'Atendimento'}</h1>
         <Badge tone={STATUS_LABEL[appt.status].tone}>{STATUS_LABEL[appt.status].label}</Badge>
       </div>
 
-      <Card>
-        <dl className="detail-grid">
-          <div><dt>Data/hora</dt><dd>{fmtDateTime(appt.startsAt)}</dd></div>
-          <div><dt>Duração</dt><dd>{appt.duracao} min</dd></div>
-          <div><dt>Valor</dt><dd>{fmtMoney(appt.valor)}</dd></div>
-          <div><dt>Sala/link</dt><dd>{appt.salaReuniao ?? '—'}</dd></div>
-        </dl>
+      <Card className="mb-4">
+        <CardContent className="pt-6">
+          <DetailGrid
+            items={[
+              { label: 'Data/hora', value: fmtDateTime(appt.startsAt) },
+              { label: 'Duração', value: `${appt.duracao} min` },
+              { label: 'Valor', value: fmtMoney(appt.valor) },
+              { label: 'Sala/link', value: appt.salaReuniao ?? '—' },
+            ]}
+          />
+        </CardContent>
       </Card>
 
-      {error && <div className="alert-error">{error}</div>}
-      {saved && <div className="alert-error" style={{ background: 'var(--bg-success)', color: 'var(--text-success)' }}>Prontuário salvo.</div>}
+      {error && <Alert className="mb-4">{error}</Alert>}
+      {saved && <Alert tone="success" className="mb-4">Prontuário salvo.</Alert>}
 
-      <form onSubmit={onSubmit}>
+      <form onSubmit={onSubmit} className="space-y-4">
         <Card>
-          <h2 className="section-subtitle">Evolução da sessão</h2>
-          <Textarea
-            label="Registro clínico"
-            name="content"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            style={{ minHeight: 160 }}
-          />
-          <div className="form-group">
-            <label>Temas abordados (Enter para adicionar)</label>
-            <div>
-              {temas.map((t) => (
-                <span key={t} className="pill active">
-                  {t}
-                  <button
-                    type="button"
-                    aria-label={`Remover ${t}`}
-                    style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', marginLeft: 6 }}
-                    onClick={() => setTemas(temas.filter((x) => x !== t))}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
+          <CardHeader>
+            <CardTitle>Evolução da sessão</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Textarea
+              label="Registro clínico"
+              name="content"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className="min-h-40"
+            />
+            <div className="mb-5">
+              <span className="mb-1.5 block text-sm font-medium">
+                Temas abordados (Enter para adicionar)
+              </span>
+              {temas.length > 0 && (
+                <div className="mb-2 flex flex-wrap gap-1.5">
+                  {temas.map((t) => (
+                    <span
+                      key={t}
+                      className="inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-foreground"
+                    >
+                      {t}
+                      <button
+                        type="button"
+                        aria-label={`Remover ${t}`}
+                        onClick={() => setTemas(temas.filter((x) => x !== t))}
+                        className="rounded-full p-0.5 transition-colors hover:bg-accent-foreground/10"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <input
+                value={temaInput}
+                onChange={(e) => setTemaInput(e.target.value)}
+                onKeyDown={onTemaKey}
+                onBlur={addTema}
+                placeholder="Ex.: ansiedade, trabalho…"
+                className={cn(fieldClass, 'h-9')}
+              />
             </div>
-            <input
-              value={temaInput}
-              onChange={(e) => setTemaInput(e.target.value)}
-              onKeyDown={onTemaKey}
-              onBlur={addTema}
-              placeholder="Ex.: ansiedade, trabalho…"
+            <Textarea
+              label="Tarefas / encaminhamentos"
+              name="tarefas"
+              value={tarefas}
+              onChange={(e) => setTarefas(e.target.value)}
             />
-          </div>
-          <Textarea
-            label="Tarefas / encaminhamentos"
-            name="tarefas"
-            value={tarefas}
-            onChange={(e) => setTarefas(e.target.value)}
-          />
-          <Input
-            label="Estado emocional (1–10)"
-            name="estado"
-            type="number"
-            min={1}
-            max={10}
-            value={estado}
-            onChange={(e) => setEstado(e.target.value)}
-          />
+            <Input
+              label="Estado emocional (1–10)"
+              name="estado"
+              type="number"
+              min={1}
+              max={10}
+              value={estado}
+              onChange={(e) => setEstado(e.target.value)}
+            />
+          </CardContent>
         </Card>
 
         <Card>
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 14 }}>
-            <input
-              type="checkbox"
-              checked={legalHold}
-              disabled={locked}
-              onChange={(e) => setLegalHold(e.target.checked)}
-            />
-            Retenção legal (legal hold)
-          </label>
-          <p className="section-subtitle" style={{ marginTop: 8 }}>
-            {locked
-              ? 'Este registro está sob retenção legal — não pode ser desmarcado.'
-              : 'Marca o registro para retenção (CFP/LGPD). Uma vez marcado, não pode ser desfeito.'}
-          </p>
+          <CardContent className="pt-6">
+            <label className="flex items-center gap-2.5 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={legalHold}
+                disabled={locked}
+                onChange={(e) => setLegalHold(e.target.checked)}
+                className="size-4 accent-[oklch(0.51_0.09_175)]"
+              />
+              Retenção legal (legal hold)
+              {locked && <ShieldAlert className="size-4 text-warning-foreground" />}
+            </label>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {locked
+                ? 'Este registro está sob retenção legal — não pode ser desmarcado.'
+                : 'Marca o registro para retenção (CFP/LGPD). Uma vez marcado, não pode ser desfeito.'}
+            </p>
+          </CardContent>
         </Card>
 
-        <div className="button-group">
+        <div>
           <Button type="submit" disabled={busy}>
             {busy ? 'Salvando…' : 'Salvar prontuário'}
           </Button>
