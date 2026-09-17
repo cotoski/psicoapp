@@ -21,6 +21,8 @@ const envSchema = z.object({
   // Reset de senha por e-mail — Mailpit no dev (docker-compose :1025)
   SMTP_HOST: z.string().default('localhost'),
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(1025),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().default('PsicoApp <no-reply@psicoapp.local>'),
   // URL pública do frontend — usada em links de e-mail
   APP_URL: z.string().default('http://localhost:3000'),

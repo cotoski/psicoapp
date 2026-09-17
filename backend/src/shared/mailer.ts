@@ -22,6 +22,9 @@ export class Mailer {
       host: config.SMTP_HOST,
       port: config.SMTP_PORT,
       secure: config.SMTP_PORT === 465,
+      auth: config.SMTP_USER
+        ? { user: config.SMTP_USER, pass: config.SMTP_PASS }
+        : undefined,
     })
   }
 
