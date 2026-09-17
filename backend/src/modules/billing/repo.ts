@@ -172,7 +172,7 @@ export class BillingRepo {
   }
 
   async dashboard(tenantId: string) {
-    const [p, s, f] = await Promise.all([
+    const [p, s, f, reaj] = await Promise.all([
       this.db
         .select({ total: count() })
         .from(patients)
@@ -204,7 +204,25 @@ export class BillingRepo {
             eq(appointments.status, 'completed'),
           ),
         ),
+      this.db
+        .select({
+          id: patients.id,
+          nome: patients.nome,
+          dataReajuste: patients.dataReajuste,
+          valor: patients.valor,
+        })
+        .from(patients)
+        .where(
+          and(
+            eq(patients.tenantId, tenantId),
+            isNull(patients.deletedAt),
+            isNull(patients.archivedAt),
+            sql`${patients.dataReajuste} <= current_date`,
+          ),
+        )
+        .orderBy(patients.dataReajuste)
+        .limit(50),
     ])
-    return { p: p[0], s: s[0], f: f[0] }
+    return { p: p[0], s: s[0], f: f[0], reaj }
   }
 }

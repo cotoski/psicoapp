@@ -1,16 +1,26 @@
 import { useEffect, useState } from 'react'
-import { Banknote, CalendarCheck, CalendarDays, CheckCircle2, Users } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Banknote, CalendarCheck, CalendarDays, CheckCircle2, TrendingUp, Users } from 'lucide-react'
 import { apiGet } from '../api/client'
+import { MeetingLink } from '../components/MeetingLink'
 import { Card, CardContent, CardHeader, CardTitle, MetricCard } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { useAuth } from '../auth/AuthContext'
-import { fmtMoney, fmtTime } from '../utils/format'
+import { fmtDate, fmtMoney, fmtTime } from '../utils/format'
+
+interface Reajuste {
+  id: string
+  nome: string
+  dataReajuste: string | null
+  valor: number
+}
 
 interface Dashboard {
   pacientes: number
   sessoesTotal: number
   sessoesRealizadas: number
   faturamento: number
+  reajustesPendentes: Reajuste[]
 }
 
 interface Appointment {
@@ -105,11 +115,12 @@ export function DashboardPage() {
         />
       </div>
 
-      <Card>
-        <CardHeader className="flex-row items-center justify-between">
-          <CardTitle>Sessões de hoje</CardTitle>
-          {today.length > 0 && <Badge tone="accent">{today.length}</Badge>}
-        </CardHeader>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="flex-row items-center justify-between">
+            <CardTitle>Sessões de hoje</CardTitle>
+            {today.length > 0 && <Badge tone="accent">{today.length}</Badge>}
+          </CardHeader>
         <CardContent>
           {today.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-10 text-center">
@@ -129,7 +140,7 @@ export function DashboardPage() {
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium">{s.patientNome ?? '—'}</div>
                     {s.salaReuniao && (
-                      <div className="truncate text-xs text-muted-foreground">{s.salaReuniao}</div>
+                      <MeetingLink sala={s.salaReuniao} className="text-xs" />
                     )}
                   </div>
                   <Badge tone={STATUS_LABEL[s.status].tone}>{STATUS_LABEL[s.status].label}</Badge>
@@ -138,7 +149,45 @@ export function DashboardPage() {
             </div>
           )}
         </CardContent>
-      </Card>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex-row items-center justify-between">
+            <CardTitle>Reajustes pendentes</CardTitle>
+            {(dash?.reajustesPendentes.length ?? 0) > 0 && (
+              <Badge tone="warning">{dash!.reajustesPendentes.length}</Badge>
+            )}
+          </CardHeader>
+          <CardContent>
+            {(dash?.reajustesPendentes.length ?? 0) === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-10 text-center">
+                <TrendingUp className="size-8 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground">
+                  Nenhum paciente com reajuste vencido.
+                </p>
+              </div>
+            ) : (
+              <div className="-m-2 divide-y">
+                {dash!.reajustesPendentes.map((p) => (
+                  <Link
+                    key={p.id}
+                    to={`/pacientes/${p.id}`}
+                    className="flex items-center gap-4 rounded-lg p-3 transition-colors hover:bg-muted/50"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium">{p.nome}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {p.dataReajuste ? `Venceu em ${fmtDate(p.dataReajuste)}` : 'Sem data'}
+                      </div>
+                    </div>
+                    <div className="text-sm font-medium tabular-nums">{fmtMoney(p.valor)}</div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

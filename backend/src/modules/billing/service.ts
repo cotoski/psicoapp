@@ -157,12 +157,19 @@ export class BillingService {
   }
 
   async dashboard(actor: ActorCtx) {
-    const { p, s, f } = await this.repo.dashboard(actor.tenantId)
+    const { p, s, f, reaj } = await this.repo.dashboard(actor.tenantId)
     return {
       pacientes: Number(p.total),
       sessoesTotal: Number(s.total),
       sessoesRealizadas: Number(s.realizadas),
       faturamento: Number(f.faturamento),
+      // Pacientes ativos com data_reajuste vencida (precisam renovar o ciclo)
+      reajustesPendentes: reaj.map((r) => ({
+        id: r.id,
+        nome: r.nome,
+        dataReajuste: r.dataReajuste,
+        valor: Number(r.valor),
+      })),
     }
   }
 }
