@@ -164,7 +164,13 @@ export function LoginPage() {
         </div>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          Acesso restrito a profissionais do consultório.
+          Novo por aqui?{' '}
+          <Link
+            to="/cadastro"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Criar conta
+          </Link>
         </p>
       </div>
     </div>

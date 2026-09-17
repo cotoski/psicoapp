@@ -10,12 +10,21 @@ import {
   type LoginResponse,
 } from '../api/client'
 
+export interface RegisterData {
+  nome: string
+  email: string
+  password: string
+  crp?: string
+  tenantName: string
+}
+
 interface AuthState {
   user: AuthUser | null
   loading: boolean
   avatarUrl: string | null
   /** Retorna o pendingToken quando a conta exige o segundo fator. */
   login: (email: string, senha: string) => Promise<string | null>
+  register: (dados: RegisterData) => Promise<void>
   verify2fa: (pendingToken: string, code: string) => Promise<void>
   logout: () => Promise<void>
   updateUser: (user: AuthUser) => void
@@ -76,6 +85,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null
   }, [])
 
+  const register = useCallback(async (dados: RegisterData) => {
+    const res = await apiPost<{ user: AuthUser; accessToken: string }>('/auth/register', dados)
+    setAccessToken(res.accessToken)
+    setUser(res.user)
+  }, [])
+
   const verify2fa = useCallback(async (pendingToken: string, code: string) => {
     const res = await apiPost<{ user: AuthUser; accessToken: string }>('/auth/login/2fa', {
       pendingToken,
@@ -96,7 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, avatarUrl, login, verify2fa, logout, updateUser, refreshAvatar }}
+      value={{ user, loading, avatarUrl, login, register, verify2fa, logout, updateUser, refreshAvatar }}
     >
       {children}
     </AuthContext.Provider>
