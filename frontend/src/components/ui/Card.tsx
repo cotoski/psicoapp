@@ -45,7 +45,12 @@ export function MetricCard({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="truncate text-sm text-muted-foreground">{label}</div>
-          <div className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">{value}</div>
+          <div
+            className="mt-1 truncate text-xl font-semibold tabular-nums tracking-tight sm:text-2xl"
+            title={typeof value === 'string' || typeof value === 'number' ? String(value) : undefined}
+          >
+            {value}
+          </div>
         </div>
         {icon && (
           <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent text-accent-foreground [&_svg]:size-4">
