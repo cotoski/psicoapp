@@ -6,7 +6,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "npm --prefix frontend ci && npm --prefix frontend run build && npm --prefix backend ci && npm --prefix backend run build",
+    "build": "npm --prefix frontend ci --include=dev && npm --prefix frontend run build && npm --prefix backend ci --include=dev && npm --prefix backend run build",
     "db:migrate": "node backend/dist/db/migrate.js",
     "start": "node backend/dist/server.js"
   }
