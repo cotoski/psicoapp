@@ -24,6 +24,9 @@ const envSchema = z.object({
   SMTP_FROM: z.string().default('PsicoApp <no-reply@psicoapp.local>'),
   // URL pública do frontend — usada em links de e-mail
   APP_URL: z.string().default('http://localhost:3000'),
+  // Produção: diretório do build do SPA servido pela própria API
+  // (same-origin → cookie httpOnly SameSite=Strict funciona sem CORS)
+  STATIC_DIR: z.string().optional(),
 })
 
 export type Config = z.infer<typeof envSchema> & { corsOrigins: string[] }

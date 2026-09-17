@@ -1,0 +1,13 @@
+{
+  "name": "psicoapp",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm --prefix frontend ci && npm --prefix frontend run build && npm --prefix backend ci && npm --prefix backend run build",
+    "db:migrate": "node backend/dist/db/migrate.js",
+    "start": "node backend/dist/server.js"
+  }
+}

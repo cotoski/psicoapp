@@ -1,3 +1,4 @@
+import path from 'node:path'
 import express, { type Express } from 'express'
 import helmet from 'helmet'
 import cors from 'cors'
@@ -49,7 +50,18 @@ export function createApp({ config, logger, db, readinessChecks = [] }: AppDeps)
       },
     }),
   )
-  app.use(helmet())
+  // CSP do helmet: img-src precisa de data:/blob: para o QR do TOTP e
+  // o objectURL do avatar quando o SPA é servido pela própria API.
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+          'img-src': ["'self'", 'data:', 'blob:'],
+        },
+      },
+    }),
+  )
   app.use(cors({ origin: config.corsOrigins, credentials: true }))
   app.use(express.json({ limit: '100kb' }))
   app.use(cookieParser())
@@ -78,6 +90,17 @@ export function createApp({ config, logger, db, readinessChecks = [] }: AppDeps)
   api.use('/dashboard', dashboardRouter({ db }))
   api.use('/tax', taxRouter({ db }))
   app.use('/api/v1', api)
+
+  // SPA estático (produção): o build do frontend é servido pela própria
+  // API, mantendo tudo same-origin (cookie SameSite=Strict, sem CORS).
+  if (config.STATIC_DIR) {
+    const dist = path.resolve(config.STATIC_DIR)
+    app.use(express.static(dist))
+    app.use((req, res, next) => {
+      if (req.method !== 'GET' || req.path.startsWith('/api/')) return next()
+      res.sendFile(path.join(dist, 'index.html'))
+    })
+  }
 
   app.use(notFound)
   app.use(errorHandler)
