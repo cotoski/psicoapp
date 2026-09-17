@@ -6,6 +6,6 @@ buildCommand = "npm run build"
 # migrations são idempotentes (drizzle registra as já aplicadas) —
 # roda a cada deploy antes de subir o servidor
 startCommand = "npm run db:migrate && npm start"
-healthcheckPath = "/health"
+healthcheckPath = "/health/ready"
 healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"
